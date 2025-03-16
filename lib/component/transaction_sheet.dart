@@ -11,11 +11,13 @@ import 'package:argent/component/app_config.dart';
 /// Handles manipulations of an uploaded transaction file
 class TransactionSheet {
 
+  TransactionSheet(this.file);
+
   /// Path to file
   File file;
 
   /// Name of sheet
-  String? name;
+  String name = '';
 
   /// Headers for the file (used in identifying the account type)
   String? headers;
@@ -29,22 +31,22 @@ class TransactionSheet {
   /// The account name of this transaction sheet
   String account = '';
 
+  /// The type of account of this transaction sheet
+  String type = '';
+
   /// Connection to database instance
   DatabaseInterface dbs = DatabaseInterface();
 
   /// Application config for parsing values
   Appconfig appconfig = Appconfig();
 
-  /// Constructor
-  TransactionSheet(this.file);
-
   /// On load, locate the account name and load all data
   /// 
   /// Returns (success, error message)
   Future<(bool,String)> load() async {
     name = basename(file.path);
-    bool resExist = await dbs.checkIfSheetExists(name!);
-    if (!resExist) return (false, 'File already uploaded!');
+    bool resExist = await dbs.doesSheetExist(name);
+    if (resExist) return (false, 'File already uploaded!');
     var resRead = await readFile(file);
     if (!resRead.$1) return resRead;
     var resIdent = await identifyAccount();
@@ -65,13 +67,16 @@ class TransactionSheet {
         // convert to 2d array
         List<dynamic> lines = csvDataStr.split('\n');
         for (var i=0; i<lines.length; i++) {
-          if (lines[i].isNotEmpty) {
+          String line = lines[i];
+          if (line.isNotEmpty) {
+            line = line.replaceAll('\n', '');
+            line = line.replaceAll('\r', '');
             // delete extra separator at end of header
-            if (i == 0 && lines[i][lines[i].length-1] == ',')
+            if (i == 0 && line[line.length-1] == ',')
             {
-              lines[i] = lines[i].substring(0,lines[i].length-1);
+              line = line.substring(0,line.length-1);
             }
-            rawCsvData.add(lines[i].split(','));
+            rawCsvData.add(line.split(','));
           }
         }
         debugPrint('Raw data: $rawCsvData');
@@ -107,19 +112,25 @@ class TransactionSheet {
   ///
   /// Returns (success, error message)
   Future<(bool,String)> identifyAccount() async {
-    if (appconfig.accountInfo != null) {
-      for (var accounttype in appconfig.accountInfo!.keys) {
-        if (appconfig.accountInfo![accounttype]['headers'] == headers) {
-          account = accounttype;
-          debugPrint('Account type matched: $account');
-          return (true, '');
+    try {
+      if (appconfig.accountInfo != null) {
+        for (var accounttype in appconfig.accountInfo!.keys) {
+          if (appconfig.accountInfo![accounttype]['headers'] == headers) {
+            account = accounttype;
+            type = appconfig.accountInfo![accounttype]['type'];
+            debugPrint('Account name matched: $account [$type]');
+            return (true, '');
+          }
         }
+        debugPrint('Unsupported account!');
+        return (false, 'Error: Unsupport account!');
+      } else {
+        debugPrint('Config not loaded!');
+        return (false, 'Error: Issue loading application configuration');
       }
-      debugPrint('Unsupported account type!');
-      return (false, 'Error: Unsupport account type!');
-    } else {
-      debugPrint('Config not loaded!');
-      return (false, 'Error: Issue loading application configuration');
+    } catch (e) {
+      debugPrint('Error with config! -> $e');
+      return (false, 'An unknown error occurred.');
     }
   }
 
@@ -184,11 +195,11 @@ class TransactionSheet {
 
   /// Deletes all transactions associated with this file
   Future<void> deleteTransactionsByAccount() async {
-    bool result = await dbs.deleteTransactionsByAccount(account);
-    if (result) {
+    try {
+      await dbs.deleteTransactionsBySheet(account);
       debugPrint("All transactions for account $account deleted successfully.");
-    } else {
-      debugPrint("Failed to delete transactions for account $account.");
+    } catch (e) {
+      throw Exception("Failed to delete transactions for $account -> $e");
     }
   }
 

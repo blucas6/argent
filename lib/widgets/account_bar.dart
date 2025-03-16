@@ -1,3 +1,4 @@
+import 'package:argent/component/popup.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
@@ -19,8 +20,24 @@ class AccountBar extends StatefulWidget {
 
 class _AccountBarState extends State<AccountBar> {
 
-  /// All accounts available from the database
-  List<String> accountList = [];
+  /// Tracks state of account widgets
+  /// 
+  /// { account name : [isVisible, isAnimating] }
+  Map<String,dynamic> accountWidgetState = {};
+
+  /// Holds a list of accounts available from the database
+  /// 
+  /// [ {name: accountname, type: accounttype, sheets: [...] } ]
+  List<Map<String,dynamic>> accountList = [];
+
+  /// Animation time for drop down arrow
+  int arrowAnimation = 100;
+
+  /// Animation time for sheet drop down menu (milliseconds)
+  int accountsDDAnimation = 550;
+
+  /// Height of the sheet drop down menu
+  double accountsDDHeight = 100.0;
 
   @override
   void initState() {
@@ -30,34 +47,49 @@ class _AccountBarState extends State<AccountBar> {
 
   // on load, get data from the db
   void loadAccounts() async {
-    accountList = await widget.dataPipeline.loadAccountList();
+    try {
+      accountList = await widget.dataPipeline.allAccounts;
+      for (int i=0; i<accountList.length; i++) {
+        String accName = accountList[i]['name'];
+        accountWidgetState[accName] = [false,false];
+      }
+    } catch (e) {
+      debugPrint('Error: load accounts failed! -> $e');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showErrorDialogue(e.toString(), context);
+      });
+    }
     setState(() {});
   }
   
   /// Adds a new transaction sheet to the database
-  Future<void> addNewAccount() async {
+  Future<void> addNewSheet() async {
     // account will be set on successful execution
     String account = '';
     // keep track of execution status
     (bool,String) resStatus;
-    // Ask the user for a file
+    // ask the user for a file
     FilePickerResult? result = await FilePicker.platform.pickFiles();
     if (result != null) {
-      File file = File(result.files.single.path!);
-      TransactionSheet tfile = TransactionSheet(file);
-      resStatus = await tfile.load();
-      if (resStatus.$1) {
-        account = tfile.account;
-        debugPrint('Identified Account: $account');
-        if (account.isNotEmpty) {
-          debugPrint('Adding transactions to database');
-          // load new data to database
-          await widget.dataPipeline.addTransactionSheetToDatabase(tfile);
-          // load accounts list, data distributer should be up to date
-          accountList = await widget.dataPipeline.loadAccountList();
+      try {
+        File file = File(result.files.single.path!);
+        TransactionSheet tfile = TransactionSheet(file);
+        resStatus = await tfile.load();
+        if (resStatus.$1) {
+          account = tfile.account;
+          debugPrint('Identified Account: $account');
+          if (account.isNotEmpty) {
+            debugPrint('Adding transactions to database');
+            // load new data to database
+            await widget.dataPipeline.addTransactionSheetToDatabase(tfile);
+            // load accounts list, data distributer should be up to date
+            loadAccounts();
+          }
+        } else {
+          debugPrint('Error loading transaction file!');
         }
-      } else {
-        debugPrint('Error loading transaction file!');
+      } catch (e) {
+        throw Exception(e);
       }
     } else {
       resStatus = (false, 'User did not select a file');
@@ -92,6 +124,198 @@ class _AccountBarState extends State<AccountBar> {
     });
   }
 
+  /// Populates the file widgets in the account bar
+  void toggleAccountSheets(String accountname) {
+    setState(() {
+      if (accountWidgetState.isNotEmpty) {
+        if (accountWidgetState[accountname][0]) {
+          // drop down is open
+          setState(() {
+            // start the animation
+            accountWidgetState[accountname][1] = false;
+          });
+          // end visibility
+          Future.delayed(Duration(milliseconds: accountsDDAnimation), () {
+            setState(() {
+              accountWidgetState[accountname][0] = false;
+            });
+          });
+        } else {
+          // drop down is closed, start animation and make visible
+          accountWidgetState[accountname][0] = true;
+          accountWidgetState[accountname][1] = true;
+        }
+      } else {
+        debugPrint('Warning: accounts in account bar not loaded!');
+      }
+    });
+  }
+
+  /// Returns an animated drop down arrow
+  AnimatedRotation getAnimatedArrow(String accName) {
+    return AnimatedRotation(
+      duration: Duration(milliseconds: arrowAnimation),
+      turns: accountWidgetState[accName][0] ?
+        -0.25 : 0.0,
+      child: Icon(
+        Icons.arrow_back_ios_rounded,
+        color: Theme.of(context).iconTheme.color
+      )
+    );
+  }
+
+  /// Deletes a sheet from the database
+  void removeSheetFromDatabase(String sheetName) async {
+    await widget.dataPipeline.removeTransactionSheetFromDatabase(sheetName);
+    loadAccounts();
+  }
+
+  /// Returns the animated transaction sheet view
+  Container getSheetView(String accName, List<String> accSheets) {
+    return Container(
+      height: accountsDDHeight,
+      decoration: BoxDecoration(
+          color: Theme.of(context).secondaryHeaderColor,
+          borderRadius: BorderRadius.circular(12)
+      ),
+      child: ListView(
+        shrinkWrap: true,
+        children: accSheets.map((acc) => 
+          Padding(
+            padding: EdgeInsets.only(left: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(acc, style: TextStyle(fontSize: 12),),
+                Container(
+                  height: 25,
+                  child: IconButton(
+                    onPressed: () {
+                      try {
+                        removeSheetFromDatabase(acc);
+                      } catch (e) {
+                        showErrorDialogue(e.toString(), context);
+                      }
+                    },
+                    icon: Icon(Icons.close),
+                    iconSize: 20,
+                    padding: EdgeInsets.zero,
+                  ),
+                )
+              ]
+            ),
+          ),
+        ).toList()
+      ),
+    );
+  }
+
+  /// Deletes all transactions and sheets associated with the account
+  Future<void> deleteAccountData(String accName) async {
+    try {
+      // find account
+      int? accIndex;
+      for (int i=0; i<accountList.length; i++) {
+        if (accName == accountList[i]['name']) accIndex = i;
+      }
+      if (accIndex != null) {
+        // go through sheets and delete data
+        List<String> sheets = accountList[accIndex]['sheets'];
+        for (int s=0; s<sheets.length; s++) {
+          await widget.dataPipeline.removeTransactionSheetFromDatabase(
+                                                                    sheets[s]);
+        }
+        // delete from account table
+        await widget.dataPipeline.deleteAccount(accountList[accIndex]['name']);
+        // reload data
+        loadAccounts();
+      } else {
+        throw Exception('Error: Failed to find account $accName!');
+      }
+    } catch (e) {
+      throw Exception(e);
+    }
+  }
+
+  /// Returns the account widget
+  List<Widget> getAllAccountWidgets() {
+    if (accountList.isEmpty) {
+      return [];
+    }
+    return accountList.map((accMap) {
+      if (accMap.isEmpty) return null;
+      String accName = '';
+      String accType = '';
+      List<String> accSheets = [];
+      try {
+        accName = accMap['name'];
+        accType = accMap['type'];
+        accSheets = accMap['sheets'];
+      } catch (e) {
+        debugPrint('Error: Failed to parse account list!');
+        return null;
+      }
+      return Column(
+        children: [
+          Container(
+            padding: EdgeInsets.only(right: 1, left: 10),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceDim,
+              borderRadius: BorderRadius.circular(12)
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(
+                  accType == 'card' ? Icons.credit_card : Icons.account_balance, 
+                  color: Theme.of(context).iconTheme.color
+                ),
+                const SizedBox(width: 8),
+                Text(accName, style: const TextStyle(fontSize: 16)),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () async {
+                        bool confirm = await showConfirmationDialogue(
+                        'Delete Account',
+                        'Are you sure you want to delete the $accName account?',
+                        context);
+                        if (confirm) {
+                          try {
+                            await deleteAccountData(accName);
+                          } catch (e) {
+                            if (context.mounted) {
+                              showErrorDialogue(e.toString(), context);
+                            }
+                          }
+                        }
+                      }
+                    ),
+                    IconButton(
+                      onPressed: () => toggleAccountSheets(accName),
+                      icon: getAnimatedArrow(accName))
+                  ]
+                )
+              ],
+            ),
+          ),
+          AnimatedContainer(
+            duration: Duration(milliseconds: accountsDDAnimation),
+            curve: Curves.easeInOut,
+            height: accountWidgetState[accName][1]
+                  ? accountsDDHeight : 0.0,
+            child: Visibility(
+              visible: accountWidgetState[accName][0],
+              child: getSheetView(accName, accSheets)
+            )
+          )          
+        ]
+      );
+    }).whereType<Widget>().toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -99,34 +323,43 @@ class _AccountBarState extends State<AccountBar> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // TITLE
           const Text(
             'Accounts',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: accountList.map((account) => Row(
-              children: [
-                Icon(
-                  Icons.account_balance, 
-                  color: Theme.of(context).iconTheme.color
+          // ACCOUNTS
+          Container(
+            width: 300,
+            padding: EdgeInsets.all(10),
+            child: Container(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.vertical,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: getAllAccountWidgets(),
                 ),
-                const SizedBox(width: 8),
-                Text(account, style: const TextStyle(fontSize: 16)),
-              ],
-            )).toList(),
-          ),
+              ),
+            )
+          ),                      
           const SizedBox(height: 20),
+          // BUTTON ADD
           ElevatedButton(
-            onPressed: addNewAccount,
+            onPressed: () {
+              try {
+                addNewSheet();
+              } catch (e) {
+                showErrorDialogue(e.toString(), context);
+              }
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor:
                 Theme.of(context).colorScheme.surfaceContainerHigh,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10)
             ),
-            child: const Text('+ Add Account', style: TextStyle(fontSize: 16))
-          )
+            child: const Text('+ Add Sheet', style: TextStyle(fontSize: 16))
+          ),
         ],
       )
     );

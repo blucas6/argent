@@ -13,8 +13,11 @@ class DataPipeline {
 
   /// Holds all transactions available from the database
   List<TransactionObj> _allTransactions = [];
+
   /// Holds a list of accounts available from the database
-  List<String> _allAccounts = [];
+  /// 
+  /// [ {name: accountname, type: accounttype, sheets: [...] } ]
+  List<Map<String,dynamic>> _allAccounts = [];
 
   /// Connection to database
   DatabaseInterface dbs = DatabaseInterface();
@@ -28,7 +31,7 @@ class DataPipeline {
   /// if not done grabbing data
   final Completer<void> _initCompleter = Completer<void>();
 
-  /// Method that will wait on the _initCompleter to be done
+  /// Method that will wait for initialization to be done
   Future<void> ensureInitialized() async {
     return _initCompleter.future;
   }
@@ -42,13 +45,14 @@ class DataPipeline {
 
   /// Getter for the internal allAccounts object will wait for the pipeline to 
   /// be done
-  Future<List<String>> get allAccounts async {
+  Future<List<Map<String,dynamic>>> get allAccounts async {
     await ensureInitialized();
     return _allAccounts;
   }
 
   /// Gathers all data for other widgets to use
   Future<void> loadPipeline() async {
+    debugPrint('Loading pipeline...');
     // if pipeline has already been loaded previously
     if (_initCompleter.isCompleted) {
       // reset it so that other objects will know the
@@ -56,22 +60,30 @@ class DataPipeline {
       _initCompleter.future;
     }
     // gather all necessary data
-    _allTransactions = await dbs.getTransactions();
-    _allAccounts = await loadAccountList();
+    try {
+      _allTransactions = await dbs.getTransactions();
+      _allAccounts = await loadAccountList(startup: true);
+    } catch (e) {
+      debugPrint('Error: Failed to load pipeline! -> $e');
+      return;
+    }
     // label pipeline as ready
     if (!_initCompleter.isCompleted) {
       _initCompleter.complete();
     }
-    debugPrint("Done loading data pipeline!");
+    debugPrint('Done loading data pipeline!');
   }
 
   /// Adds a transactions from a transaction sheet to the database
   Future<bool> addTransactionSheetToDatabase(TransactionSheet tsheet) async {
     try {
+      await ensureInitialized();
       // add the new account to the account table if it does not exist already
       if (!await dbs.checkIfAccountExists(tsheet.account)) {
-        dbs.addAccount(tsheet.account);
+        dbs.addAccount(tsheet.account, tsheet.type);
       }
+      // add the new sheet to the sheet table with associated account
+      dbs.addSheet(tsheet.name, tsheet.account);
       // go through the list of transactionobjs and add the database
       for (TransactionObj trans in tsheet.data) {
         dbs.addTransaction(trans);
@@ -83,38 +95,72 @@ class DataPipeline {
       debugPrint('''
         Unable to add ${path.basename(tsheet.file.path)} to database -> $e
       ''');
+      return false;
     }
-    return false;
+  }
+
+  /// Deletes all transactions associated with a sheet from the transactions
+  /// table and deletes the transaction sheet from the sheet table
+  Future<bool> removeTransactionSheetFromDatabase(String sheetName) async {
+    try {
+      await ensureInitialized();
+      await dbs.deleteTransactionsBySheet(sheetName);
+      await dbs.deleteSheet(sheetName);
+      await loadPipeline();
+      return true;
+    } catch (e) {
+      throw Exception(e);
+    }
   }
 
   /// Updates a single transaction in the database
   Future<bool> updateData(int id, String column, String value) async {
     // TODO: Pass old and new transaction and let this function determine
     // the values that changed to update the database
-    bool success =  await dbs.updateTransactionByID(id, column, value);
-    // no need to reload the entire pipeline just update the internal value
-    for (int t=0; t<_allTransactions.length; t++) {
-      // find matching transaction
-      if (_allTransactions[t].id == id) {
-        // get the properties as a map
-        Map<String,dynamic> props = _allTransactions[t].getProperties();
-        // change the value
-        props[column] = value;
-        // replace the index with the new object
-        _allTransactions[t] = TransactionObj.loadFromMap(props);
+    try {
+      await ensureInitialized();
+      await dbs.updateTransactionByID(id, column, value);
+      // no need to reload the entire pipeline just update the internal value
+      for (int t=0; t<_allTransactions.length; t++) {
+        // find matching transaction
+        if (_allTransactions[t].id == id) {
+          // get the properties as a map
+          Map<String,dynamic> props = _allTransactions[t].getProperties();
+          // change the value
+          props[column] = value;
+          // replace the index with the new object
+          _allTransactions[t] = TransactionObj.loadFromMap(props);
+        }
       }
+      return true;
+    } catch (e) {
+      throw Exception('Error: Failed to update data! -> $e');
     }
-    return success;
   }
 
   /// Returns a list of all accounts in database
-  Future<List<String>> loadAccountList() async {
-    List<Map<String,dynamic>> accounts = await dbs.getAllAccounts();
-    List<String> accountlist = [];
-    for (Map<String,dynamic> row in accounts) {
-      accountlist.add(row['name']);
+  /// 
+  /// Do not check for pipeline initialization on startup
+  Future<List<Map<String,dynamic>>> loadAccountList(
+                                              {bool startup = false}) async {
+    try {
+      if (!startup) await ensureInitialized();
+      List<Map<String,dynamic>> accounts = await dbs.getAllAccounts();
+      List<Map<String,dynamic>> accountlist = [];
+      for (Map<String,dynamic> row in accounts) {
+        List<Map<String,dynamic>> sheetsData = await dbs.getAllSheetsForAccount(row['name']);
+        List<String> sheets = [];
+        for (int s=0; s<sheetsData.length; s++) {
+          sheets.add(sheetsData[s]['name']);
+        }
+        var entry = <String,dynamic>{'name': row['name'], 'type': row['type'], 'sheets': sheets};
+        accountlist.add(entry);
+      }
+      debugPrint('$accountlist');
+      return accountlist;
+    } catch (e) {
+      throw Exception('Error: failed to load account list -> $e');
     }
-    return accountlist;
   }
 
   /// Sort the data from all spending across all accounts into a profile
@@ -133,10 +179,8 @@ class DataPipeline {
         totalspending += row.cost;
       }
     }
-
     if (totalspending != 0) totalspending *= -1;
     if (totalsavings != 0) totalsavings *= -1;
-
     return
     {
       'totalspending': totalspending,
@@ -174,17 +218,26 @@ class DataPipeline {
   /// Deletes all transactions associated with an account from the database
   Future<bool> deleteTransactionsByAccount(String account) async {
     await ensureInitialized();
-    bool success = await dbs.deleteTransactionsByAccount(account);
+    try {
+      await dbs.deleteTransactionsBySheet(account);
+    } catch (e) {
+      throw Exception('Error: failed to delete transactions by account -> $e');
+    }
     await loadPipeline();
-    return success;
+    return true;
   }
 
   /// Deletes an account from the account table
   Future<bool> deleteAccount(String account) async {
+    debugPrint('starting to delete account');
     await ensureInitialized();
-    bool success = await dbs.deleteAccount(account);
+    try {
+      await dbs.deleteAccount(account);
+    } catch (e) {
+      throw Exception('Error: failed to delete account -> $e');
+    }
     await loadPipeline();
-    return success;
+    return true;
   }
 
 }

@@ -56,21 +56,20 @@ class _HomePageState extends State<HomePage> {
         title: Text(widget.title),
       ),
       body: Center(
-        child: Column(
-          children: [
-            Expanded(child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Column(
-                  children: [
-                    AccountBar(dataPipeline: widget.dataPipeline)
-                  ],
-                )
-              ],
-            ))
-          ],
-        ),
+        child: Container(
+          width: 500,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Column(
+                children: [
+                  AccountBar(dataPipeline: widget.dataPipeline)
+                ],
+              )
+            ],
+          )
+        )
       ),
     );
   }

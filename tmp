@@ -1,0 +1,74 @@
+import 'package:flutter/material.dart';
+
+class AnimatedHeightExample extends StatefulWidget {
+  @override
+  _AnimatedHeightExampleState createState() => _AnimatedHeightExampleState();
+}
+
+class _AnimatedHeightExampleState extends State<AnimatedHeightExample> {
+  bool _isVisible = false;
+  bool _isAnimating = false;
+
+  // Function to toggle visibility with animation
+  void toggleVisibility() {
+    if (_isVisible) {
+      // Start hiding the container with a delay after animation completes
+      setState(() {
+        _isAnimating = true;
+      });
+
+      // Wait for the animation duration before hiding the widget
+      Future.delayed(Duration(milliseconds: 500), () {
+        setState(() {
+          _isVisible = false;
+          _isAnimating = false;
+        });
+      });
+    } else {
+      // Show the container immediately
+      setState(() {
+        _isVisible = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Animate Only Height with Delay'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // AnimatedContainer for height animation
+            AnimatedContainer(
+              duration: Duration(milliseconds: 500), // Duration of the height animation
+              curve: Curves.easeInOut, // Smooth transition curve
+              height: _isVisible ? 100.0 : 0.0, // Animate height change
+              padding: EdgeInsets.all(20),
+              color: Colors.blue[100],
+              child: Visibility(
+                visible: _isVisible, // Controlled visibility state
+                child: Text(
+                  'This is the animated text!',
+                  style: TextStyle(fontSize: 20),
+                ),
+              ),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: toggleVisibility, // Toggle visibility with delay
+              child: Text(_isVisible ? 'Hide Text' : 'Show Text'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+void main() {
+  runApp(MaterialApp(home: AnimatedHeightExample()));
+}
