@@ -1,11 +1,11 @@
-import 'dart:async';
-import 'package:argent/component/debug.dart';
-import 'package:path/path.dart' as path;
-
 import 'package:argent/component/transaction_obj.dart';
 import 'package:argent/database/database_interface.dart';
 import 'package:argent/component/transaction_sheet.dart';
 import 'package:argent/component/tags.dart';
+import 'package:argent/component/debug.dart';
+
+import 'dart:async';
+import 'package:path/path.dart' as path;
 
 /// This object serves as a data pipeline from the database to the application 
 /// widgets

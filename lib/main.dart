@@ -64,7 +64,7 @@ class _HomePageState extends State<HomePage> {
             children: [
               Column(
                 children: [
-                  AccountBar(dataPipeline: widget.dataPipeline)
+                  AccountBarWidget(dataPipeline: widget.dataPipeline)
                 ],
               )
             ],

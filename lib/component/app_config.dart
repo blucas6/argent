@@ -1,5 +1,6 @@
-import 'dart:convert';
 import 'package:argent/component/debug.dart';
+
+import 'dart:convert';
 import 'package:flutter/services.dart';
 
 /// This object serves as the configuration object for the application

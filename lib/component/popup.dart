@@ -1,6 +1,6 @@
-
 import 'package:flutter/material.dart';
 
+/// Creates an error pop up dialogue
 Future<bool> showErrorDialogue(String message, BuildContext context) async {
   return await showDialog<bool>(
     context: context,
@@ -19,6 +19,7 @@ Future<bool> showErrorDialogue(String message, BuildContext context) async {
   ) ?? false;
 }
 
+/// Creates a confirmation pop up
 Future<bool> showConfirmationDialogue(String title,
                                     String message,
                                     BuildContext context) async {

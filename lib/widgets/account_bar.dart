@@ -1,25 +1,25 @@
+import 'package:argent/component/data_pipeline.dart';
+import 'package:argent/component/transaction_sheet.dart';
 import 'package:argent/component/debug.dart';
 import 'package:argent/component/popup.dart';
+
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 
-import 'package:argent/component/data_pipeline.dart';
-import 'package:argent/component/transaction_sheet.dart';
-
 /// This widget displays the accounts available
-class AccountBar extends StatefulWidget {
+class AccountBarWidget extends StatefulWidget {
 
   /// Access to the data pipeline
   final DataPipeline dataPipeline;
 
-  const AccountBar({super.key, required this.dataPipeline});
+  const AccountBarWidget({super.key, required this.dataPipeline});
 
   @override
-  State<AccountBar> createState() => _AccountBarState();
+  State<AccountBarWidget> createState() => _AccountBarWidgetState();
 }
 
-class _AccountBarState extends State<AccountBar> {
+class _AccountBarWidgetState extends State<AccountBarWidget> {
 
   /// Tracks state of account widgets
   /// 

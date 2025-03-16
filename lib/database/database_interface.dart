@@ -1,9 +1,9 @@
+import 'package:argent/component/transaction_obj.dart';
+import 'package:argent/component/debug.dart';
+
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path_provider/path_provider.dart';
-
-import 'package:argent/component/transaction_obj.dart';
-import 'package:argent/component/debug.dart';
 
 // TODO: add versioning and update capability
 
