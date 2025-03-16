@@ -55,7 +55,9 @@ class _AccountBarState extends State<AccountBar> {
       accountList = await widget.dataPipeline.allAccounts;
       for (int i=0; i<accountList.length; i++) {
         String accName = accountList[i]['name'];
-        accountWidgetState[accName] = [false,false];
+        if (!accountWidgetState.containsKey(accName)) {
+          accountWidgetState[accName] = [false,false];
+        }
       }
     } catch (e) {
       compInfo.printout('Error: load accounts failed! -> $e');
@@ -100,30 +102,13 @@ class _AccountBarState extends State<AccountBar> {
       compInfo.printout('User did not select a file');
       return;
     }
-
     setState(() {
       if (resStatus.$1) {
         // TODO: fix callback
         // trigger the callback to reload all widgets
         // widget.newDataTrigger();
       } else {
-        showDialog(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: const Text('Error'),
-              content: Text(resStatus.$2),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('OK'),
-                ),
-              ],
-            );
-          },
-        );
+        showErrorDialogue(resStatus.$2, context);
       }
     });
   }
@@ -194,11 +179,19 @@ class _AccountBarState extends State<AccountBar> {
                 Container(
                   height: 25,
                   child: IconButton(
-                    onPressed: () {
-                      try {
-                        removeSheetFromDatabase(acc);
-                      } catch (e) {
-                        showErrorDialogue(e.toString(), context);
+                    onPressed: () async {
+                      bool confirm = await showConfirmationDialogue(
+                        'Delete Sheet',
+                        'Delete transaction sheet?',
+                        context);
+                      if (confirm) {
+                        try {
+                          removeSheetFromDatabase(acc);
+                        } catch (e) {
+                          if (context.mounted) {
+                            showErrorDialogue(e.toString(), context);
+                          }
+                        } 
                       }
                     },
                     icon: Icon(Icons.close),
@@ -241,7 +234,7 @@ class _AccountBarState extends State<AccountBar> {
     }
   }
 
-  /// Returns the account widget
+  /// Returns a list of the account widgets
   List<Widget> getAllAccountWidgets() {
     if (accountList.isEmpty) {
       return [];
@@ -337,16 +330,14 @@ class _AccountBarState extends State<AccountBar> {
           Container(
             width: 300,
             padding: EdgeInsets.all(10),
-            child: Container(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.vertical,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: getAllAccountWidgets(),
-                ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: getAllAccountWidgets(),
               ),
-            )
-          ),                      
+            ),
+          ),
           const SizedBox(height: 20),
           // BUTTON ADD
           ElevatedButton(
