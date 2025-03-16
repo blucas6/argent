@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+import 'package:argent/component/debug.dart';
 import 'package:path/path.dart' as path;
 
 import 'package:argent/component/transaction_obj.dart';
@@ -10,6 +10,11 @@ import 'package:argent/component/tags.dart';
 /// This object serves as a data pipeline from the database to the application 
 /// widgets
 class DataPipeline {
+  
+  // load the pipeline on instantiation
+  DataPipeline() {
+    loadPipeline();
+  }
 
   /// Holds all transactions available from the database
   List<TransactionObj> _allTransactions = [];
@@ -22,10 +27,8 @@ class DataPipeline {
   /// Connection to database
   DatabaseInterface dbs = DatabaseInterface();
 
-  // load the pipeline on instantiation
-  DataPipeline() {
-    loadPipeline();
-  }
+  /// Holds the component information for debugging messages
+  CompInfo compInfo = CompInfo('Pipeline', 1);
 
   /// Keeps track if the pipeline is ready or not, _initCompleter will be false 
   /// if not done grabbing data
@@ -52,7 +55,7 @@ class DataPipeline {
 
   /// Gathers all data for other widgets to use
   Future<void> loadPipeline() async {
-    debugPrint('Loading pipeline...');
+    compInfo.printout('Loading pipeline...');
     // if pipeline has already been loaded previously
     if (_initCompleter.isCompleted) {
       // reset it so that other objects will know the
@@ -64,14 +67,14 @@ class DataPipeline {
       _allTransactions = await dbs.getTransactions();
       _allAccounts = await loadAccountList(startup: true);
     } catch (e) {
-      debugPrint('Error: Failed to load pipeline! -> $e');
+      compInfo.printout('Error: Failed to load pipeline! -> $e');
       return;
     }
     // label pipeline as ready
     if (!_initCompleter.isCompleted) {
       _initCompleter.complete();
     }
-    debugPrint('Done loading data pipeline!');
+    compInfo.printout('Done loading data pipeline!');
   }
 
   /// Adds a transactions from a transaction sheet to the database
@@ -92,9 +95,8 @@ class DataPipeline {
       await loadPipeline();
       return true;
     } catch (e) {
-      debugPrint('''
-        Unable to add ${path.basename(tsheet.file.path)} to database -> $e
-      ''');
+      compInfo.printout('Unable to add ${path.basename(tsheet.file.path)} to '
+                        'database -> $e');
       return false;
     }
   }
@@ -156,7 +158,7 @@ class DataPipeline {
         var entry = <String,dynamic>{'name': row['name'], 'type': row['type'], 'sheets': sheets};
         accountlist.add(entry);
       }
-      debugPrint('$accountlist');
+      compInfo.printout('Account list loaded: $accountlist');
       return accountlist;
     } catch (e) {
       throw Exception('Error: failed to load account list -> $e');
@@ -229,7 +231,6 @@ class DataPipeline {
 
   /// Deletes an account from the account table
   Future<bool> deleteAccount(String account) async {
-    debugPrint('starting to delete account');
     await ensureInitialized();
     try {
       await dbs.deleteAccount(account);

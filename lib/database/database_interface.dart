@@ -1,10 +1,9 @@
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:argent/component/transaction_obj.dart';
+import 'package:argent/component/debug.dart';
 
 // TODO: add versioning and update capability
 
@@ -26,6 +25,9 @@ class DatabaseInterface {
   static final String transactionTableName = "transactions";
   static final String accountTableName = "accounts";
   static final String sheetTableName = "sheets";
+
+  /// Holds the component information for debugging messages
+  final CompInfo compInfo = CompInfo('SQL', 3);
 
   /// Setup the database on constructor call
   DatabaseInterface._constructor() {
@@ -81,20 +83,19 @@ class DatabaseInterface {
           FOREIGN KEY (Account) REFERENCES $accountTableName(name),
           FOREIGN KEY (Sheet) REFERENCES $sheetTableName(name));
           """);
-          debugPrint("Database initialized at: $databasePath");
+          compInfo.printout('Database initialized at: $databasePath');
         },
       );
     } catch (e) {
-      debugPrint("Failed to connect to database! -> $e");
+      compInfo.printout('Failed to connect to database! -> $e');
     }
-    debugPrint('Connected to database -> $databasePath');
+    compInfo.printout('Connected to database -> $databasePath');
     return db;
   }
 
   /// Returns whether an account exists or not
   Future<bool> checkIfAccountExists(String accountName) async {
-    debugPrint('''
-    SQL: checking if account $accountName exists''');
+    compInfo.printout('Checking if account $accountName exists');
     try {
       final db = await database;
       List<Map<String, dynamic>> result = await db.rawQuery(
@@ -102,15 +103,14 @@ class DatabaseInterface {
       );
       return result.isNotEmpty;
     } catch (e) {
-      debugPrint('SQL: check if account exists failed.');
+      compInfo.printout('Check if account exists failed.');
       throw Exception(e);
     }
   }
 
   /// Returns if a sheet has already been uploaded
   Future<bool> doesSheetExist(String sheetName) async {
-    debugPrint('''
-    SQL: checking if sheet $sheetName exists''');
+    compInfo.printout('Checking if sheet $sheetName exists');
     try {
       final db = await database;
       List<Map<String, dynamic>> result = await db.rawQuery(
@@ -118,20 +118,19 @@ class DatabaseInterface {
       );
       return result.isNotEmpty;
     } catch (e) {
-      debugPrint('SQL: check if sheet exists failed.');
+      compInfo.printout('Check if sheet exists failed');
       throw Exception(e);
     }
   }
 
   /// Returns all the accounts in the account table as a list
   Future<List<Map<String,dynamic>>> getAllAccounts() async {
-    debugPrint('''
-    SQL: getting all accounts from $accountTableName table''');
+    compInfo.printout('Getting all accounts from $accountTableName table');
     try {
       final db = await database;
       return await db.query(accountTableName);
     } catch (e) {
-      debugPrint('SQL: get all accounts failed.');
+      compInfo.printout('Get all accounts failed');
       throw Exception(e);
     }
   }
@@ -139,9 +138,8 @@ class DatabaseInterface {
   /// Returns all the sheets associated with an account name
   Future<List<Map<String,dynamic>>> getAllSheetsForAccount(
     String accountName) async {
-    debugPrint('''
-    SQL: getting all sheets for account $accountName from $sheetTableName table
-    ''');
+    compInfo.printout('Getting all sheets for account $accountName from'
+                  '$sheetTableName table');
     try {
       final db = await database;
       List<Map<String,dynamic>> result = await db.rawQuery(
@@ -149,32 +147,29 @@ class DatabaseInterface {
       );
       return result;
     } catch (e) {
-      debugPrint('SQL: get all sheets for account $accountName failed.');
+      compInfo.printout('Get all sheets for account $accountName failed');
       throw Exception(e);
     }
   }
 
   /// Adds the sheet name to the sheet table
   Future<bool> addSheet(String sheetName, String accountName) async {
-    debugPrint('''
-    SQL: adding sheet $sheetName to $sheetTableName''');
+    compInfo.printout('Adding sheet $sheetName to $sheetTableName');
     try {
       final db = await database;
       await db.insert(sheetTableName, {'name': sheetName, 
                                       'Account': accountName});
-      debugPrint('Sheet added: $sheetName');
+      compInfo.printout('Sheet added: $sheetName');
       return true;
     } catch (e) {
-      debugPrint('SQL: add sheet $sheetName failed.');
+      compInfo.printout('Add sheet $sheetName failed');
       throw Exception(e);
     }
   }
 
   /// Delete sheet from sheet table
   Future<int> deleteSheet(String sheetName) async {
-    debugPrint('''
-    SQL: deleting sheet $sheetName from $sheetTableName
-    ''');
+    compInfo.printout('Deleting sheet $sheetName from $sheetTableName');
     String savePoint = 'deleteSheetSP';
     try {
       final db = await database;
@@ -191,7 +186,7 @@ class DatabaseInterface {
       await db.execute("RELEASE SAVEPOINT $savePoint;");
       return count;
     } catch (e) {
-      debugPrint('SQL: delete sheet $sheetName from sheet table failed');
+      compInfo.printout('Delete sheet $sheetName from sheet table failed');
       throw Exception(e);
     }
   }
@@ -200,47 +195,45 @@ class DatabaseInterface {
   Future<bool> addAccount(String accountName, String type) async {
     // accounts must be added before transaction data because of the
     // foreign key constraint
-    debugPrint('''
-    SQL: adding account $accountName [$type] to $accountTableName
-    ''');
+    compInfo.printout('Adding account $accountName [$type] to ' 
+                      '$accountTableName');
     try {
       final db = await database;
       await db.insert(accountTableName, {'name': accountName, 'type': type});
-      debugPrint('Account added: $accountName [$type]');
+      compInfo.printout('Account added: $accountName [$type]');
       return true;
     } catch (e) {
-      debugPrint('SQL: add account $accountName failed.');
+      compInfo.printout('Add account $accountName failed.');
       throw Exception(e);
     }
   }
 
   /// Adds a singular transaction to the transaction table
   Future<bool> addTransaction(TransactionObj trans) async {
-    debugPrint('''
-    SQL: adding transaction ${trans.getProperties()} to $transactionTableName
-    ''');
+    compInfo.printout('Adding transaction ${trans.getProperties()} to ' 
+                      '$transactionTableName');
     try {
       // sqlite will increment the id, so provide a map with no id
       final db = await database;
       await db.insert(transactionTableName, trans.getPropertiesNoID());
-      debugPrint('Transaction added: ${trans.getProperties()}');
+      compInfo.printout('Transaction added: ${trans.getProperties()}');
       return true;
     } catch (e) {
-      debugPrint('SQL: add transaction failed.');
+      compInfo.printout('Add transaction failed.');
       throw Exception(e);
     }
   }
 
   /// Gets all transactions from database
   Future<List<TransactionObj>> getTransactions() async {
-    debugPrint('''
-    SQL: getting all transactions from $transactionTableName table''');
+    compInfo.printout('Getting all transactions from $transactionTableName ' 
+                      'table');
     try {
       final db = await database;
       final data = await db.query(transactionTableName);
       return data.map((entry) => TransactionObj.loadFromMap(entry)).toList();
     } catch (e) {
-      debugPrint('SQL: get all transactions failed.');
+      compInfo.printout('Get all transactions failed');
       throw Exception(e);
     }
   }
@@ -250,8 +243,8 @@ class DatabaseInterface {
   /// Returns the amount of transactions updated
   Future<int> updateTransactionByID(int id, String column, dynamic value) async
   {
-    debugPrint('''
-    SQL: Updating transaction where ID: $id in $transactionTableName''');
+    compInfo.printout('Updating transaction where ID: $id in ' 
+                      '$transactionTableName');
     String savePoint = 'updateTransSP';
     // pass an id to update a transaction at a given column with a certain value
     try {
@@ -270,15 +263,15 @@ class DatabaseInterface {
       await db.execute("RELEASE SAVEPOINT $savePoint;");
       return count;
     } catch (e) {
-      debugPrint('SQL: update transaction by ID $id failed.');
+      compInfo.printout('Update transaction by ID $id failed');
       throw Exception(e);
     }
   }
 
   /// Deletes a transaction by its id
   Future<int> deleteTransactionByID(int id) async {
-    debugPrint('''
-    SQL: deleting transaction where ID: $id from $transactionTableName''');
+    compInfo.printout('Deleting transaction where ID: $id from ' 
+                      '$transactionTableName');
     String savePoint = 'deleteTransSP';
     try {
       final db = await database;
@@ -295,16 +288,15 @@ class DatabaseInterface {
       await db.execute("RELEASE SAVEPOINT $savePoint;");
       return count;
     } catch (e) {
-      debugPrint('SQL: delete transaction by ID $id failed');
+      compInfo.printout('Delete transaction by ID $id failed');
       throw Exception(e);
     }
   }
 
   /// Delete all transactions by transaction sheet from transaction table
   Future<int> deleteTransactionsBySheet(String sheet) async {
-    debugPrint('''
-    SQL: deleting transactions by sheet $sheet from $transactionTableName table
-    ''');
+    compInfo.printout('Deleting transactions by sheet $sheet from ' 
+                      '$transactionTableName table');
     try {
       final db = await database;
       int count = await db.delete(
@@ -314,15 +306,14 @@ class DatabaseInterface {
       );
       return count;
     } catch (e) {
-      debugPrint('SQL: delete transactions by sheet $sheet failed');
+      compInfo.printout('Delete transactions by sheet $sheet failed');
       throw Exception(e);
     }
   }
 
   /// Deletes an account
   Future<int> deleteAccount(String account) async {
-    debugPrint('''
-    Deleting $account from $accountTableName table''');
+    compInfo.printout('Deleting $account from $accountTableName table');
     String savePoint = 'deleteAccountSP';
     try {
       final db = await database;
@@ -332,7 +323,6 @@ class DatabaseInterface {
         where: 'name = ?',
         whereArgs: [account],
       );
-      debugPrint('count $count account $account');
       if (count > 1) {
         await db.execute("ROLLBACK TO $savePoint;");
         throw Exception('SQL: duplicate accounts, rolling back delete');
@@ -340,7 +330,7 @@ class DatabaseInterface {
       await db.execute("RELEASE SAVEPOINT $savePoint;");
       return count;
     } catch (e) {
-      debugPrint('SQL: delete account by account name $account failed');
+      compInfo.printout('Delete account by account name $account failed');
       throw Exception(e);
     }
   }
@@ -352,11 +342,11 @@ class DatabaseInterface {
                                                 db.query(transactionTableName);
 
     if (results.isNotEmpty) {
-      debugPrint('--- Transactions in Database ---');
-      debugPrint('$results');
-      debugPrint('--------------------------------');
+      compInfo.printout('--- Transactions in Database ---');
+      compInfo.printout(results.toString());
+      compInfo.printout('--------------------------------');
     } else {
-      debugPrint('No transactions found in the database.');
+      compInfo.printout('No transactions found in the database');
     }
   }
 }

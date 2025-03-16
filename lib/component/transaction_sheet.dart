@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
 import 'package:excel/excel.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart';
@@ -7,6 +6,7 @@ import 'package:path/path.dart';
 import 'package:argent/component/transaction_obj.dart';
 import 'package:argent/database/database_interface.dart';
 import 'package:argent/component/app_config.dart';
+import 'package:argent/component/debug.dart';
 
 /// Handles manipulations of an uploaded transaction file
 class TransactionSheet {
@@ -39,6 +39,9 @@ class TransactionSheet {
 
   /// Application config for parsing values
   Appconfig appconfig = Appconfig();
+
+  /// Holds the component information for debugging messages
+  CompInfo compInfo = CompInfo('TransSheet', 2);
 
   /// On load, locate the account name and load all data
   /// 
@@ -79,9 +82,9 @@ class TransactionSheet {
             rawCsvData.add(line.split(','));
           }
         }
-        debugPrint('Raw data: $rawCsvData');
+        compInfo.printout('Raw data: $rawCsvData');
         headers = rawCsvData[0].join(',');
-        debugPrint('CSV Headers: $headers');
+        compInfo.printout('CSV Headers: $headers');
         return (true, '');
       } else if (file.path.endsWith('.xlsx')) {
         var bytes = await file.readAsBytes();
@@ -92,18 +95,18 @@ class TransactionSheet {
           headers = firstTable.rows[0]
               .map((cell) => cell?.value != null ? cell?.value.toString() : '')
               .join(',');
-          debugPrint('Excel Headers: $headers');
+          compInfo.printout('Excel Headers: $headers');
           return (true, '');
         } else {
-          debugPrint('No tables found in Excel file.');
+          compInfo.printout('No tables found in Excel file.');
           return (false, 'Error: Excel file empty!');
         }
       } else {
-        debugPrint('Unsupported file type! -> $file');
+        compInfo.printout('Unsupported file type! -> $file');
         return (false, 'Error: Unsupported file type!');
       }
     } catch (e) {
-      debugPrint('Failed to read in file -> $e');
+      compInfo.printout('Failed to read in file -> $e');
       return (false, 'Error: Failed to read file ($e)');
     }
   }
@@ -118,18 +121,18 @@ class TransactionSheet {
           if (appconfig.accountInfo![accounttype]['headers'] == headers) {
             account = accounttype;
             type = appconfig.accountInfo![accounttype]['type'];
-            debugPrint('Account name matched: $account [$type]');
+            compInfo.printout('Account name matched: $account [$type]');
             return (true, '');
           }
         }
-        debugPrint('Unsupported account!');
+        compInfo.printout('Unsupported account!');
         return (false, 'Error: Unsupport account!');
       } else {
-        debugPrint('Config not loaded!');
+        compInfo.printout('Config not loaded!');
         return (false, 'Error: Issue loading application configuration');
       }
     } catch (e) {
-      debugPrint('Error with config! -> $e');
+      compInfo.printout('Error with config! -> $e');
       return (false, 'An unknown error occurred.');
     }
   }
@@ -164,8 +167,6 @@ class TransactionSheet {
               }
               // key is present therefore place the value of the csv into the transaction map
               transactionMap[keyFormat['column']] = value;
-            } else {
-              // debugPrint("Key does not exists -> $key");
             }
           }
           // add account type as a column
@@ -181,7 +182,7 @@ class TransactionSheet {
       }
       return (false, 'Error: Issue loading account configuration');
     } catch (e) {
-      debugPrint('Error: Failed loading transactions ($e)');
+      compInfo.printout('Error: Failed loading transactions ($e)');
       return (false, 'Error: Failed loading transactions ($e)');
     }
   }
@@ -197,19 +198,9 @@ class TransactionSheet {
   Future<void> deleteTransactionsByAccount() async {
     try {
       await dbs.deleteTransactionsBySheet(account);
-      debugPrint("All transactions for account $account deleted successfully.");
+      compInfo.printout('All transactions for account $account deleted');
     } catch (e) {
       throw Exception("Failed to delete transactions for $account -> $e");
-    }
-  }
-
-  /// Deletes the file itself
-  Future<void> deleteFile() async {
-    if (await file.exists()) {
-      await file.delete();
-      debugPrint("File deleted.");
-    } else {
-      debugPrint("File not found for deletion.");
     }
   }
 }

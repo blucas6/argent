@@ -1,3 +1,4 @@
+import 'package:argent/component/debug.dart';
 import 'package:argent/component/popup.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
@@ -39,6 +40,9 @@ class _AccountBarState extends State<AccountBar> {
   /// Height of the sheet drop down menu
   double accountsDDHeight = 100.0;
 
+  /// Holds the component information for debugging messages
+  CompInfo compInfo = CompInfo('AccountBar', 1);
+
   @override
   void initState() {
     super.initState();
@@ -54,7 +58,7 @@ class _AccountBarState extends State<AccountBar> {
         accountWidgetState[accName] = [false,false];
       }
     } catch (e) {
-      debugPrint('Error: load accounts failed! -> $e');
+      compInfo.printout('Error: load accounts failed! -> $e');
       WidgetsBinding.instance.addPostFrameCallback((_) {
         showErrorDialogue(e.toString(), context);
       });
@@ -77,23 +81,23 @@ class _AccountBarState extends State<AccountBar> {
         resStatus = await tfile.load();
         if (resStatus.$1) {
           account = tfile.account;
-          debugPrint('Identified Account: $account');
+          compInfo.printout('Identified Account: $account');
           if (account.isNotEmpty) {
-            debugPrint('Adding transactions to database');
+            compInfo.printout('Adding transactions to database');
             // load new data to database
             await widget.dataPipeline.addTransactionSheetToDatabase(tfile);
             // load accounts list, data distributer should be up to date
             loadAccounts();
           }
         } else {
-          debugPrint('Error loading transaction file!');
+          compInfo.printout('Error loading transaction file!');
         }
       } catch (e) {
         throw Exception(e);
       }
     } else {
       resStatus = (false, 'User did not select a file');
-      debugPrint('User did not select a file');
+      compInfo.printout('User did not select a file');
       return;
     }
 
@@ -146,7 +150,7 @@ class _AccountBarState extends State<AccountBar> {
           accountWidgetState[accountname][1] = true;
         }
       } else {
-        debugPrint('Warning: accounts in account bar not loaded!');
+        compInfo.printout('Warning: accounts in account bar not loaded!');
       }
     });
   }
@@ -252,7 +256,7 @@ class _AccountBarState extends State<AccountBar> {
         accType = accMap['type'];
         accSheets = accMap['sheets'];
       } catch (e) {
-        debugPrint('Error: Failed to parse account list!');
+        compInfo.printout('Error: Failed to parse account list!');
         return null;
       }
       return Column(
