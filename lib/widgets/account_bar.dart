@@ -1,7 +1,7 @@
-import 'package:argent/component/data_pipeline.dart';
-import 'package:argent/component/transaction_sheet.dart';
-import 'package:argent/component/debug.dart';
-import 'package:argent/component/popup.dart';
+import 'package:argent/components/data_pipeline.dart';
+import 'package:argent/components/transaction_sheet.dart';
+import 'package:argent/components/debug.dart';
+import 'package:argent/components/popup.dart';
 
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
@@ -30,6 +30,9 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
   /// 
   /// [ {name: accountname, type: accounttype, sheets: [...] } ]
   List<Map<String,dynamic>> accountList = [];
+
+  /// Padding around account bar area
+  double paddingAccountBar = 10;
 
   /// Animation time for drop down arrow
   int arrowAnimation = 100;
@@ -239,6 +242,7 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
     if (accountList.isEmpty) {
       return [];
     }
+    // go through account list to build widgets
     return accountList.map((accMap) {
       if (accMap.isEmpty) return null;
       String accName = '';
@@ -264,12 +268,17 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Icon(
-                  accType == 'card' ? Icons.credit_card : Icons.account_balance, 
-                  color: Theme.of(context).iconTheme.color
+                Row(
+                  children: [
+                    Icon(
+                      accType == 'card' ? Icons.credit_card
+                        : Icons.account_balance, 
+                      color: Theme.of(context).iconTheme.color
+                    ),
+                    const SizedBox(width: 8),
+                    Text(accName, style: const TextStyle(fontSize: 16)),  
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Text(accName, style: const TextStyle(fontSize: 16)),
                 Row(
                   children: [
                     IconButton(
@@ -316,7 +325,7 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: EdgeInsets.all(paddingAccountBar),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -328,7 +337,6 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
           const SizedBox(height: 10),
           // ACCOUNTS
           Container(
-            width: 300,
             padding: EdgeInsets.all(10),
             child: SingleChildScrollView(
               scrollDirection: Axis.vertical,

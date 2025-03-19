@@ -1,20 +1,20 @@
-import 'package:argent/component/transaction_obj.dart';
+import 'package:argent/components/transaction_obj.dart';
 
 /// Helper class to handle sorting transactions
 class Tags {
 
   /// Hides transaction from being counted in calculations
-  static final String hidden = 'Hidden';
+  final String hidden = 'Hidden';
   
   /// Only money earned, not considered in the refund category
-  static final String income = 'Income';
+  final String income = 'Income';
 
   // Money transfered to saving accounts, not counted as spending, not 
   // subtracted from networth
-  static final String savings = 'Savings';
+  final String savings = 'Savings';
 
   // Used for lifestyle calculations
-  static final String rent = 'Rent';
+  final String rent = 'Rent';
 
   /// Determines transactions that are part of spending
   bool isTransactionSpending(TransactionObj trans) {

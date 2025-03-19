@@ -1,5 +1,5 @@
-import 'package:argent/component/transaction_obj.dart';
-import 'package:argent/component/debug.dart';
+import 'package:argent/components/transaction_obj.dart';
+import 'package:argent/components/debug.dart';
 
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';

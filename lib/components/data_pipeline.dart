@@ -1,8 +1,8 @@
-import 'package:argent/component/transaction_obj.dart';
+import 'package:argent/components/transaction_obj.dart';
 import 'package:argent/database/database_interface.dart';
-import 'package:argent/component/transaction_sheet.dart';
-import 'package:argent/component/tags.dart';
-import 'package:argent/component/debug.dart';
+import 'package:argent/components/transaction_sheet.dart';
+import 'package:argent/components/tags.dart';
+import 'package:argent/components/debug.dart';
 
 import 'dart:async';
 import 'package:path/path.dart' as path;

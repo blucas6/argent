@@ -1,7 +1,7 @@
-import 'package:argent/component/transaction_obj.dart';
+import 'package:argent/components/transaction_obj.dart';
 import 'package:argent/database/database_interface.dart';
-import 'package:argent/component/app_config.dart';
-import 'package:argent/component/debug.dart';
+import 'package:argent/components/app_config.dart';
+import 'package:argent/components/debug.dart';
 
 import 'dart:io';
 import 'package:excel/excel.dart';

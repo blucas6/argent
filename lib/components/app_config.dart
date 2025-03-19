@@ -1,4 +1,4 @@
-import 'package:argent/component/debug.dart';
+import 'package:argent/components/debug.dart';
 
 import 'dart:convert';
 import 'package:flutter/services.dart';
