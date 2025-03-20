@@ -41,7 +41,9 @@ class Argent extends StatelessWidget {
     return MaterialApp(
       title: 'Argent',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 209, 134, 23)),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color.fromARGB(255, 209, 134, 23)
+          ),
       ),
       home: HomePage(title: 'Argent'),
     );
@@ -66,7 +68,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -74,7 +75,7 @@ class _HomePageState extends State<HomePage> {
       ),
       body: Center(
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // LEFT SECTION

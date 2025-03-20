@@ -71,6 +71,20 @@ class TransactionObj {
     };
   }
 
+  /// Returns object members as a map of displayable strings
+  Map<String, dynamic> getPropsForDisplay() {
+    return {
+      'Date': DateFormat('yyyy-MM-dd').format(date),
+      'Card': cardn.toString(),
+      'Description': content,
+      'Category': category,
+      'Cost': cost.toStringAsFixed(2),
+      'Account': account,
+      'Tags': tags.join(tagdelim),
+      'Sheet': sheet
+    };
+  }
+
   /// Creates a TransactionObj from a map of properties
   TransactionObj.loadFromMap(Map<String, dynamic> map) :
     id = map['ID'],
@@ -122,6 +136,22 @@ class TransactionObj {
       'Account': false,
       'Tags': true,
       'Sheet': false
+    };
+  }
+
+  /// Returns a map of the sizes for each category in a transaction
+  /// used for determining how much space is needed per member
+  Map<String, dynamic> getDisplaySizing() {
+    return {
+      'ID': 10.0,
+      'Date': 90.0,
+      'Card': 70.0,
+      'Description': 300.0,
+      'Category': 130.0,
+      'Cost': 80.0,
+      'Account': 80.0,
+      'Tags': 80.0,
+      'Sheet': 90.0
     };
   }
 

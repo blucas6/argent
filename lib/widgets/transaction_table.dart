@@ -24,10 +24,7 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
   List<TransactionObj> allTransactions = [];
 
   /// Sorted transactions based on filters
-  List<TransactionObj> currentFilteredTransactions = [];
-
-  /// List of transaction objects as strings for display
-  List<List<String>> currentTransactionStrings = [];
+  List<TransactionObj> sortedTransactions = [];
 
   /// Current filter for the year
   String? activeYearFilter;
@@ -52,13 +49,6 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
   /// Controls the total length of the table widget
   double maxTransactionWidgetHeight = 450;
 
-  /// Sets the widths of data table column
-  double defaultColumnWidth = 150;
-  int smallColumnLength = 3;
-  int mediumColummLength = 7;
-  double smallColumnWidth = 80;
-  double mediumColumnWidth = 90;
-
   @override
   void initState() {
     super.initState();
@@ -70,7 +60,7 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
     compInfo.printout('Reloading transaction widget');
     // get the transactions from the datadistributer
     allTransactions = await widget.dataPipeline.allTransactions;
-
+    sortedTransactions = List<TransactionObj>.from(allTransactions);
     // apply filters if there are any
     if (activeMonthFilter != null && activeYearFilter != null) {
       // applyFilters(activeYearFilter!, activeMonthFilter!);
@@ -78,6 +68,46 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
     setState(() {});
   }
 
+  /// Updates the icon state
+  void updateIcons(int columnIndex) {
+    // set all columns besides the one of interest to null
+    for (int i=0; i<columnSorts.length; i++) {
+      columnSorts[i] = columnIndex != i ? null : columnSorts[i];
+    }
+    if (columnSorts[columnIndex] == null) {
+      // turning true, point up
+      columnSorts[columnIndex] = true;
+    } else if (columnSorts[columnIndex] == true) {
+      // turning false, point down
+      columnSorts[columnIndex] = false;
+    } else {
+      // turning null, point back to left
+      columnSorts[columnIndex] = null;
+    }
+  }
+
+  /// Sorts the columns by column index
+  void sortMe(int columnIndex) {
+    // if the sorting column contains a list do not sort
+    if (sortedTransactions[0].getProperties().values.toList()
+        [columnIndex] is List) return;
+    if (columnSorts[columnIndex] == true) {
+      // just turned true, sort from highest ot lowest
+      sortedTransactions.sort((a,b) {
+        return a.getProperties().values.toList()[columnIndex].
+            compareTo(b.getProperties().values.toList()[columnIndex]);
+      });
+    } else if (columnSorts[columnIndex] == false) {
+      // just turned false, sort from lowest to highest
+      sortedTransactions.sort((a,b) {
+        return b.getProperties().values.toList()[columnIndex].
+            compareTo(a.getProperties().values.toList()[columnIndex]);
+      });
+    } else {
+      // just turned null, return to default order
+      sortedTransactions = List<TransactionObj>.from(allTransactions);
+    }
+  }
 
   /// Returns an icon button that triggers the sort function
   IconButton getColumnIcon(int cindex) {
@@ -102,20 +132,14 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
       );
     }
     return IconButton(
-      onPressed: () => {},//sortMe(cindex),
+      onPressed: () {
+        updateIcons(cindex);
+        sortMe(cindex);
+        setState(() {});
+      },
       icon: myIcon,
       padding: EdgeInsets.zero
     );
-  }
-
-  /// Returns the appropriate column width for a title
-  double getColumnWidth(String title) {
-    if(title.length < smallColumnLength) {
-      return smallColumnWidth;
-    } else if (title.length < mediumColummLength) {
-      return mediumColumnWidth;
-    }
-    return defaultColumnWidth;
   }
 
   /// Returns the box decoration for the header containers
@@ -148,18 +172,23 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
                           int displayIndex,
                           int maxCols,
                           int sortIndex,
+                          double cwidth,
                           BuildContext context) {
-    double cwidth = getColumnWidth(title);
     // add index and respective size
     columnSizes.addEntries([MapEntry(displayIndex, FixedColumnWidth(cwidth))]);
     return Container(
+      padding: EdgeInsets.only(left: 5),
       decoration: getHeaderDecoration(displayIndex, maxCols, context),
       width: cwidth,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(title),
-          getColumnIcon(sortIndex)
+          Container(
+            height: 35,
+            width: 30,
+            child: getColumnIcon(sortIndex)
+          )
         ],
       )
     );
@@ -174,7 +203,8 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
                                                               getProperties();
     Map<String, dynamic> displayProps = TransactionObj.defaultTransaction().
                                                         getDisplayProperties();
-
+    Map<String, dynamic> displaySizes = TransactionObj.defaultTransaction().
+                                                        getDisplaySizing();
     // find how many columns to display
     int totalColumnsDisplayed = 0;
     displayProps.forEach((column, toDisplay) {
@@ -183,7 +213,6 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
 
     // keep track of index for sorting
     int sortIndex = 0;
-
     // keep track of columns that are displayed
     int displayIndex = 0;
 
@@ -194,6 +223,7 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
                                           displayIndex,
                                           totalColumnsDisplayed,
                                           sortIndex,
+                                          displaySizes[title],
                                           context);
         myHeaders.add(theHeader);
         displayIndex++; // increment columns when done building
@@ -234,9 +264,9 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
                         Theme.of(context).colorScheme.onSecondary
                         : Theme.of(context).colorScheme.tertiaryContainer;
 
-    transObj.getProperties().forEach((column, value) {
+    transObj.getPropsForDisplay().forEach((key, value) {
       // skip if column is not displayed
-      if (!displayProps[column]) return;
+      if (!displayProps[key]) return;
       myCells.add(
         TableCell(
           child: MouseRegion(
@@ -254,7 +284,7 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
                 color: rowColor,
                 child: SingleChildScrollView(
                   scrollDirection: Axis.vertical,
-                  child: Text(value.toString(), 
+                  child: Text(value, 
                     style: cellTextStyle
                   )
                 ),
@@ -276,7 +306,7 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
     // row number keeps track of alternate colored rows
     int rowNum = 0;
     // loop through the transactions to create the cells and rows
-    for (TransactionObj transObj in allTransactions) {
+    for (TransactionObj transObj in sortedTransactions) {
       List<TableCell> myCells = getCellsFromTransactionObj(transObj,
                                                             displayProps,
                                                             rowNum);
