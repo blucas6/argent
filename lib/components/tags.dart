@@ -9,12 +9,26 @@ class Tags {
   /// Only money earned, not considered in the refund category
   final String income = 'Income';
 
-  // Money transfered to saving accounts, not counted as spending, not 
-  // subtracted from networth
+  /// Money transfered to saving accounts, not counted as spending, not 
+  /// subtracted from networth
   final String savings = 'Savings';
 
-  // Used for lifestyle calculations
+  /// Used for lifestyle calculations
   final String rent = 'Rent';
+
+  /// Special tag returned from an edit menu to delete all tags in
+  /// a transaction, not meant to be displayed
+  final String delete = '_delete_';
+  
+  /// Returns a list of all tags
+  List<String> getAllTags() {
+    return [
+      hidden,
+      income,
+      savings,
+      rent
+    ];
+  }
 
   /// Determines transactions that are part of spending
   bool isTransactionSpending(TransactionObj trans) {

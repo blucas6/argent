@@ -6,22 +6,31 @@ class TransactionObj {
   // Properties
   /// Date the transaction occurred
   late DateTime date;
+  String dateCol = 'Date';
   /// Generated unique ID
   int? id;
+  String idCol = 'ID';
   /// Card number for the transaction
   int? cardn;
+  String cardCol = 'Card';
   /// Amount of the transaction
   late double cost;
+  String costCol = 'Cost';
   /// A description of the transaction
   String? content;
+  String contentCol = 'Description';
   /// Assigned category by the card company
   String? category;
+  String categoryCol = 'Category';
   /// Account where the transaction came from
   String? account;
+  String accountCol = 'Account';
   /// Tags associated with the transaction
   late List<String> tags;
+  String tagCol = 'Tags';
   /// Transaction sheet from where the transaction came from
   String? sheet;
+  String sheetCol = 'Sheet';
 
   /// How tags are separated in a list
   String tagdelim = ';';
@@ -38,50 +47,50 @@ class TransactionObj {
       var sometags,
       String? sheet}) {
     date = dates != null ? DateTime.parse(dates) : DateTime.parse('1980-01-01');
-    tags = sometags is String ? sometags.split(tagdelim) : (sometags != null ? sometags : []);
-    cost = somecost == null ? 0 : somecost;
+    tags = sometags is String ? sometags.split(tagdelim) : (sometags ?? []);
+    cost = somecost ?? 0;
   }
 
   /// Return object members as a map
   Map<String, dynamic> getProperties() {
     return {
-      'ID': id,
-      'Date': DateFormat('yyyy-MM-dd').format(date),
-      'Card': cardn,
-      'Description': content,
-      'Category': category,
-      'Cost': cost,
-      'Account': account,
-      'Tags': tags,
-      'Sheet': sheet
+      idCol: id,
+      dateCol: DateFormat('yyyy-MM-dd').format(date),
+      cardCol: cardn,
+      contentCol: content,
+      categoryCol: category,
+      costCol: cost,
+      accountCol: account,
+      tagCol: tags,
+      sheetCol: sheet
     };
   }
 
   /// Returns object members as a map with no ID
   Map<String, dynamic> getPropertiesNoID() {
     return {
-      'Date': DateFormat('yyyy-MM-dd').format(date),
-      'Card': cardn,
-      'Description': content,
-      'Category': category,
-      'Cost': cost,
-      'Account': account,
-      'Tags': tags.join(tagdelim),
-      'Sheet': sheet
+      dateCol: DateFormat('yyyy-MM-dd').format(date),
+      cardCol: cardn,
+      contentCol: content,
+      categoryCol: category,
+      costCol: cost,
+      accountCol: account,
+      tagCol: tags.length == 1 ? tags[0] : tags.join(tagdelim),
+      sheetCol: sheet
     };
   }
 
   /// Returns object members as a map of displayable strings
   Map<String, dynamic> getPropsForDisplay() {
     return {
-      'Date': DateFormat('yyyy-MM-dd').format(date),
-      'Card': cardn.toString(),
-      'Description': content,
-      'Category': category,
-      'Cost': cost.toStringAsFixed(2),
-      'Account': account,
-      'Tags': tags.join(tagdelim),
-      'Sheet': sheet
+      dateCol: DateFormat('yyyy-MM-dd').format(date),
+      cardCol: cardn.toString(),
+      contentCol: content,
+      categoryCol: category,
+      costCol: cost.toStringAsFixed(2),
+      accountCol: account,
+      tagCol: tags.length == 1 ? tags[0] : tags.join(tagdelim),
+      sheetCol: sheet
     };
   }
 
@@ -92,7 +101,13 @@ class TransactionObj {
     cardn = map['Card'],
     content = map['Description'],
     category = map['Category'],
-    cost = map['Cost'] is double ? map['Cost'] : (map['Cost'] is int ? map['Cost'].toDouble() : (map['Cost'] is String ? double.parse(map['Cost']) : null)),   // in case of integers
+    cost = map['Cost'] is double ? 
+            map['Cost']
+            : (map['Cost'] is int ?
+              map['Cost'].toDouble()
+              : (map['Cost'] is String ?
+                double.parse(map['Cost'])
+                : null)),   // in case of integers
     account = map['Account'],
     tags = map['Tags'] is String ? map['Tags'].split(';') : map['Tags'],
     sheet = map['Sheet'];
@@ -112,30 +127,30 @@ class TransactionObj {
   /// Provide a blank map to generate a TransactionObj from
   Map<String, dynamic> getBlankMap() {
     return {
-      'ID': 0,
-      'Date': DateTime.parse('1980-01-01'),
-      'Card': 0,
-      'Description': '',
-      'Category': '',
-      'Cost': 0,
-      'Account': '',
-      'Tags': List<String>.empty(growable: true),
-      'Sheet': ''
+      idCol: 0,
+      dateCol: DateTime.parse('1980-01-01'),
+      cardCol: 0,
+      contentCol: '',
+      categoryCol: '',
+      costCol: 0,
+      accountCol: '',
+      tagCol: List<String>.empty(growable: true),
+      sheetCol: ''
     };
   }
 
   /// Defines which cells are displayable in the transaction widget
   Map<String, dynamic> getDisplayProperties() {
     return {
-      'ID': false,
-      'Date': true,
-      'Card': true,
-      'Description': true,
-      'Category': true,
-      'Cost': true,
-      'Account': false,
-      'Tags': true,
-      'Sheet': false
+      idCol: false,
+      dateCol: true,
+      cardCol: true,
+      contentCol: true,
+      categoryCol: true,
+      costCol: true,
+      accountCol: false,
+      tagCol: true,
+      sheetCol: false
     };
   }
 
@@ -143,30 +158,30 @@ class TransactionObj {
   /// used for determining how much space is needed per member
   Map<String, dynamic> getDisplaySizing() {
     return {
-      'ID': 10.0,
-      'Date': 90.0,
-      'Card': 70.0,
-      'Description': 300.0,
-      'Category': 130.0,
-      'Cost': 80.0,
-      'Account': 80.0,
-      'Tags': 80.0,
-      'Sheet': 90.0
+      idCol: 10.0,
+      dateCol: 90.0,
+      cardCol: 70.0,
+      contentCol: 300.0,
+      categoryCol: 130.0,
+      costCol: 80.0,
+      accountCol: 80.0,
+      tagCol: 80.0,
+      sheetCol: 90.0
     };
   }
 
   /// Returns an SQL query according to properties
   Map<String, dynamic> getSQLProperties() {
     return {
-      'ID': 'INTEGER PRIMARY KEY',
-      'Date': 'DATE',
-      'Card': 'INTEGER',
-      'Description': 'TEXT',
-      'Category': 'TEXT',
-      'Cost': 'DOUBLE',
-      'Account': 'TEXT',
-      'Tags': 'TEXT',
-      'Sheet': 'TEXT'
+      idCol: 'INTEGER PRIMARY KEY',
+      dateCol: 'DATE',
+      cardCol: 'INTEGER',
+      contentCol: 'TEXT',
+      categoryCol: 'TEXT',
+      costCol: 'DOUBLE',
+      accountCol: 'TEXT',
+      tagCol: 'TEXT',
+      sheetCol: 'TEXT'
     };
   }
 

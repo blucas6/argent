@@ -2,6 +2,7 @@ import 'package:argent/components/data_pipeline.dart';
 import 'package:argent/components/debug.dart';
 import 'package:argent/components/transaction_obj.dart';
 import 'package:argent/components/tags.dart';
+import 'package:argent/widgets/edit_menu.dart';
 
 import 'package:flutter/material.dart';
 import 'dart:math';
@@ -35,19 +36,23 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
   /// Holds the display size for each column
   Map<int, TableColumnWidth> columnSizes = {};
 
-  // Keep track of which rows are being hovered
-  List<List<bool>> rowHovers = [];
-
   /// Used to keep track of which columns are sorted, starts off with all
-  /// columns as null
+  /// columns as unsorted null, false is L->H and true is H->L
   List<bool?> columnSorts = List.filled(
-                          TransactionObj().getProperties().keys.length, null);
+                              TransactionObj().getProperties().keys.length, null
+                            );
 
   /// Holds the component information for debugging messages
-  CompInfo compInfo = CompInfo('Table', 1);
+  CompInfo compInfo = CompInfo('Table', 2);
 
   /// Controls the total length of the table widget
   double maxTransactionWidgetHeight = 450;
+
+  /// Keeps track of which rows are being hovered
+  List<bool> rowHovers = [];
+
+  /// Scroll controller for table
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -60,10 +65,20 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
     compInfo.printout('Reloading transaction widget');
     // get the transactions from the datadistributer
     allTransactions = await widget.dataPipeline.allTransactions;
+    // copy data - do not reference
     sortedTransactions = List<TransactionObj>.from(allTransactions);
+    // create a 2D array for which row is being hovered
+    rowHovers = List.filled(sortedTransactions.length, false);
     // apply filters if there are any
     if (activeMonthFilter != null && activeYearFilter != null) {
       // applyFilters(activeYearFilter!, activeMonthFilter!);
+    }
+    // if a column is being sorted, sort transactions
+    for (int col=0; col<columnSorts.length; col++) {
+      if (columnSorts[col] != null) {
+        updateIcons(col);
+        sortMe(col);
+      }
     }
     setState(() {});
   }
@@ -90,7 +105,9 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
   void sortMe(int columnIndex) {
     // if the sorting column contains a list do not sort
     if (sortedTransactions[0].getProperties().values.toList()
-        [columnIndex] is List) return;
+      [columnIndex] is List) {
+      return;
+    }
     if (columnSorts[columnIndex] == true) {
       // just turned true, sort from highest ot lowest
       sortedTransactions.sort((a,b) {
@@ -234,7 +251,14 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
     return myHeaders;
   }
 
-  /// Returns the appropriate coloring for the row
+  /// Sets the corresponding row to be highlighted
+  void onHover(int rowNum, bool isHover) {
+    setState(() {
+      rowHovers[rowNum] = isHover;
+    });
+  }
+
+  /// Returns the appropriate text style for the row
   TextStyle getTextStyleFromTransObj(TransactionObj transObj) {
     List<String> taglist = transObj.tags;
     if (taglist.contains(Tags().hidden)) {
@@ -250,6 +274,23 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
     }
   }
 
+  /// Returns the tag cell object
+  Text getTagCellContent(List<String> tags) {
+    return Text(
+        tags.join('\n'),
+      );
+  }
+
+  /// Returns the coloring for the whole row
+  Color getColorForRow(int rowNum, BuildContext context) {
+    return rowNum % 2 == 0 ? (rowHovers[rowNum] ? 
+                            Theme.of(context).colorScheme.secondaryFixed
+                            : Theme.of(context).colorScheme.tertiaryFixed)
+                          : (rowHovers[rowNum] ?
+                            Theme.of(context).colorScheme.secondaryFixed
+                            : Theme.of(context).colorScheme.surface);
+  }
+
   /// Turn a transaction object into cells
   List<TableCell> getCellsFromTransactionObj(TransactionObj transObj,
                                             Map<String,dynamic> displayProps,
@@ -260,21 +301,28 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
     TextStyle cellTextStyle = getTextStyleFromTransObj(transObj);
 
     // get the coloration for the row
-    Color rowColor = rowNum % 2 == 0 ? 
-                        Theme.of(context).colorScheme.onSecondary
-                        : Theme.of(context).colorScheme.tertiaryContainer;
+    Color rowColor = getColorForRow(rowNum, context);
 
     transObj.getPropsForDisplay().forEach((key, value) {
       // skip if column is not displayed
       if (!displayProps[key]) return;
+      dynamic cellContent;
+      if (key == transObj.tagCol) {
+        // special cell for tags
+        cellContent = getTagCellContent(transObj.tags);
+      } else {
+        cellContent = Text(
+                        value,
+                        style: cellTextStyle);
+      }
       myCells.add(
         TableCell(
           child: MouseRegion(
-            onEnter: (_) => null, //onHover(rowc, colc, true),
-            onExit: (_) => null, //onHover(rowc, colc, false),
+            onEnter: (_) => onHover(rowNum, true),
+            onExit: (_) => onHover(rowNum, false),
             child: GestureDetector(
               onTap: () {
-                //showEditMenu(context, rowc);
+                showEditMenu(context, rowNum);
               },
               child: AnimatedContainer(
                 duration: Duration(milliseconds: 200),
@@ -284,9 +332,7 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
                 color: rowColor,
                 child: SingleChildScrollView(
                   scrollDirection: Axis.vertical,
-                  child: Text(value, 
-                    style: cellTextStyle
-                  )
+                  child: cellContent
                 ),
               ),
             ),
@@ -295,6 +341,34 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
       );
     });    
     return myCells;
+  }
+
+  /// Pops up the edit menu widget and updates the transactions
+  void showEditMenu(BuildContext context, int rowNum) async {
+    String? newTag = await showDialog<String?>(
+                                      context: context,
+                                      builder: (BuildContext context) {
+      return EditMenuWidget();
+    });
+    compInfo.printout("Adding new tag: $newTag");
+    if (newTag != null) {
+      List<String> currentTags = sortedTransactions[rowNum].tags;
+      if (newTag == Tags().delete) {
+        currentTags = [];
+      } else if (currentTags.isEmpty || currentTags[0] == '') {
+        currentTags = [newTag];
+      } else {
+        currentTags.add(newTag);
+      }
+      // update the transaction by id
+      compInfo.printout(currentTags);
+      await widget.dataPipeline.updateData(sortedTransactions[rowNum].id!,
+                                  TransactionObj().tagCol,
+                                  currentTags.join(TransactionObj().tagdelim));
+      // trigger reload all widgets
+      // TODO
+      // newdatatrigger()
+    }
   }
 
   /// Create the data rows for the data table
@@ -340,9 +414,14 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
                 maxHeight: maxTransactionWidgetHeight
               ),
               alignment: Alignment.topLeft,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.vertical,
-                child: createDataTable(context)
+              child: Scrollbar(
+                controller: _scrollController,
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  scrollDirection: Axis.vertical,
+                  child: createDataTable(context)
+                ),
               ),
             ),
           ]

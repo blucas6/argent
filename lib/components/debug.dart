@@ -14,7 +14,7 @@ class CompInfo {
   String indent = '  ';
 
   /// Print out a debugging message with a priority
-  void printout(String msg) {
+  void printout(dynamic msg) {
     int thePrio = priority - 1;
     String tabs = '';
     if (thePrio > 0) tabs = indent * thePrio;
