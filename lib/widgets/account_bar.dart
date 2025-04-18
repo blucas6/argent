@@ -2,10 +2,13 @@ import 'package:argent/components/data_pipeline.dart';
 import 'package:argent/components/transaction_sheet.dart';
 import 'package:argent/components/debug.dart';
 import 'package:argent/components/popup.dart';
+import 'package:argent/main.dart';
 
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
+
+import 'package:provider/provider.dart';
 
 /// This widget displays the accounts available
 class AccountBarWidget extends StatefulWidget {
@@ -44,7 +47,7 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
   double accountsDDHeight = 100.0;
 
   /// Holds the component information for debugging messages
-  CompInfo compInfo = CompInfo('AccountBar', 1);
+  CompInfo compInfo = CompInfo('AccountBar', 2);
 
   @override
   void initState() {
@@ -52,8 +55,21 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
     loadAccounts();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    context.read<RefreshController>().addListener(_newDataPush);
+  }
+
+  /// Another widget made changes to the account data
+  void _newDataPush() {
+    loadAccounts();
+  }
+
   // on load, get data from the db
   void loadAccounts() async {
+    compInfo.printout('Reloading account widget');
     try {
       accountList = await widget.dataPipeline.allAccounts;
       for (int i=0; i<accountList.length; i++) {
@@ -72,7 +88,7 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
   }
   
   /// Adds a new transaction sheet to the database
-  Future<void> addNewSheet() async {
+  Future<(bool,String)> addNewSheet() async {
     // account will be set on successful execution
     String account = '';
     // keep track of execution status
@@ -89,10 +105,10 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
           compInfo.printout('Identified Account: $account');
           if (account.isNotEmpty) {
             compInfo.printout('Adding transactions to database');
-            // load new data to database
+            // add new data to database
+            // no need to load new account data because the new data push event
+            // will cause reloading
             await widget.dataPipeline.addTransactionSheetToDatabase(tfile);
-            // load accounts list, data distributer should be up to date
-            loadAccounts();
           }
         } else {
           compInfo.printout('Error loading transaction file!');
@@ -103,17 +119,8 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
     } else {
       resStatus = (false, 'User did not select a file');
       compInfo.printout('User did not select a file');
-      return;
     }
-    setState(() {
-      if (resStatus.$1) {
-        // TODO: fix callback
-        // trigger the callback to reload all widgets
-        // widget.newDataTrigger();
-      } else {
-        showErrorDialogue(resStatus.$2, context);
-      }
-    });
+    return resStatus;
   }
 
   /// Populates the file widgets in the account bar
@@ -157,9 +164,9 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
   }
 
   /// Deletes a sheet from the database
-  void removeSheetFromDatabase(String sheetName) async {
+  Future<void> removeSheetFromDatabase(String sheetName) async {
+    // tell datapipeline to delete the sheet
     await widget.dataPipeline.removeTransactionSheetFromDatabase(sheetName);
-    loadAccounts();
   }
 
   /// Returns the animated transaction sheet view
@@ -183,13 +190,15 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
                   height: 25,
                   child: IconButton(
                     onPressed: () async {
+                      var controller = context.read<RefreshController>();
                       bool confirm = await showConfirmationDialogue(
                         'Delete Sheet',
                         'Delete transaction sheet?',
                         context);
                       if (confirm) {
                         try {
-                          removeSheetFromDatabase(acc);
+                          await removeSheetFromDatabase(acc);
+                          controller.refreshWidgets();
                         } catch (e) {
                           if (context.mounted) {
                             showErrorDialogue(e.toString(), context);
@@ -226,9 +235,8 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
                                                                     sheets[s]);
         }
         // delete from account table
+        // no need to reload data because of new data push event
         await widget.dataPipeline.deleteAccount(accountList[accIndex]['name']);
-        // reload data
-        loadAccounts();
       } else {
         throw Exception('Error: Failed to find account $accName!');
       }
@@ -284,6 +292,7 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
                     IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () async {
+                        var controller = context.read<RefreshController>();
                         bool confirm = await showConfirmationDialogue(
                         'Delete Account',
                         'Are you sure you want to delete the $accName account?',
@@ -291,6 +300,7 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
                         if (confirm) {
                           try {
                             await deleteAccountData(accName);
+                            controller.refreshWidgets();
                           } catch (e) {
                             if (context.mounted) {
                               showErrorDialogue(e.toString(), context);
@@ -336,24 +346,39 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
           ),
           const SizedBox(height: 10),
           // ACCOUNTS
-          Container(
-            padding: EdgeInsets.all(10),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.vertical,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: getAllAccountWidgets(),
-              ),
-            ),
+          Consumer<RefreshController>(
+            builder: (context, rc, child) {
+              return Container(
+                padding: EdgeInsets.all(10),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: getAllAccountWidgets(),
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 20),
           // BUTTON ADD
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
+              var controller = context.read<RefreshController>();
               try {
-                addNewSheet();
+                (bool,String) resStatus = await addNewSheet();
+                if (resStatus.$1) {
+                  // cause a new data push event
+                  controller.refreshWidgets();
+                } else {
+                  if (context.mounted) {
+                    showErrorDialogue(resStatus.$2, context);
+                  }
+                }
               } catch (e) {
-                showErrorDialogue(e.toString(), context);
+                if (context.mounted) {
+                  showErrorDialogue(e.toString(), context);
+                }
               }
             },
             style: ElevatedButton.styleFrom(

@@ -62,6 +62,18 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
     loadTransactions();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    context.read<RefreshController>().addListener(_newDataPush);
+  }
+
+  /// Another widget made changes to the transaction data, need to refresh
+  void _newDataPush() {
+    loadTransactions();
+  }
+
   /// Reloads all transaction data and applies active filters
   void loadTransactions() async {
     compInfo.printout('Reloading transaction widget');
@@ -325,8 +337,10 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
             child: GestureDetector(
               onTap: () async {
                 var controller = context.read<RefreshController>();
-                await showEditMenu(context, rowNum);
-                controller.refreshwidgets();
+                bool update = await showEditMenu(context, rowNum);
+                if (update) {
+                  controller.refreshWidgets();
+                }
               },
               child: AnimatedContainer(
                 duration: Duration(milliseconds: 200),
@@ -348,7 +362,7 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
   }
 
   /// Pops up the edit menu widget and updates the transactions
-  Future<void> showEditMenu(BuildContext context, int rowNum) async {
+  Future<bool> showEditMenu(BuildContext context, int rowNum) async {
     String? newTag = await showDialog<String?>(
                                       context: context,
                                       builder: (BuildContext context) {
@@ -364,13 +378,16 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
       } else {
         currentTags.add(newTag);
       }
-      // update the transaction by id
       compInfo.printout(currentTags);
+      // update the transaction by id
+      // no need to reload transaction data because the new data push event
+      // will handle reloading
       await widget.dataPipeline.updateData(sortedTransactions[rowNum].id!,
                                   TransactionObj().tagCol,
                                   currentTags.join(TransactionObj().tagdelim));
-      loadTransactions();
+      return true;
     }
+    return false;
   }
 
   /// Create the data rows for the data table
@@ -407,7 +424,7 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
           children: createDataTableHeaders(context),
         ),
         Consumer<RefreshController>(
-          builder: (context, c, child) {
+          builder: (context, rc, child) {
             return Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
