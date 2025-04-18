@@ -1,5 +1,3 @@
-import 'package:argent/components/debug.dart';
-import 'package:argent/widgets/fliter.dart';
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'dart:io';
@@ -9,6 +7,8 @@ import 'package:provider/provider.dart';
 import 'package:argent/components/data_pipeline.dart';
 import 'package:argent/widgets/transaction_table.dart';
 import 'package:argent/widgets/account_bar.dart';
+import 'package:argent/components/event_controller.dart';
+import 'package:argent/widgets/filter.dart';
 
 /// Entrance
 void main() async {
@@ -32,23 +32,10 @@ void main() async {
   }
   runApp(
     ChangeNotifierProvider(
-      create: (_) => RefreshController(),
+      create: (_) => EventController(),
       child: Argent()
     )
   );
-}
-
-/// Refresh Controller Class
-class RefreshController extends ChangeNotifier {
-  
-  /// Holds the component information for debugging messages
-  CompInfo compInfo = CompInfo('Refresh', 1);
-
-  /// Method to rebuild certain widgets
-  void refreshWidgets() {
-    compInfo.printout('Widgets rebuilding');
-    notifyListeners();
-  }
 }
 
 /// Argent Main Class
