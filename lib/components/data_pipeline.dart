@@ -68,7 +68,7 @@ class DataPipeline {
       _allAccounts = await loadAccountList(startup: true);
     } catch (e) {
       compInfo.printout('Error: Failed to load pipeline! -> $e');
-      return;
+      throw Exception(e);
     }
     // label pipeline as ready
     if (!_initCompleter.isCompleted) {
@@ -78,7 +78,7 @@ class DataPipeline {
   }
 
   /// Adds a transactions from a transaction sheet to the database
-  Future<bool> addTransactionSheetToDatabase(TransactionSheet tsheet) async {
+  Future<void> addTransactionSheetToDatabase(TransactionSheet tsheet) async {
     try {
       await ensureInitialized();
       // add the new account to the account table if it does not exist already
@@ -91,32 +91,29 @@ class DataPipeline {
       for (TransactionObj trans in tsheet.data) {
         dbs.addTransaction(trans);
       }
-      // reload updated data
-      await loadPipeline();
-      return true;
     } catch (e) {
       compInfo.printout('Unable to add ${path.basename(tsheet.file.path)} to '
                         'database -> $e');
-      return false;
+      throw Exception(e);
     }
+    await loadPipeline();
   }
 
   /// Deletes all transactions associated with a sheet from the transactions
   /// table and deletes the transaction sheet from the sheet table
-  Future<bool> removeTransactionSheetFromDatabase(String sheetName) async {
+  Future<void> removeTransactionSheetFromDatabase(String sheetName) async {
     try {
       await ensureInitialized();
       await dbs.deleteTransactionsBySheet(sheetName);
       await dbs.deleteSheet(sheetName);
-      await loadPipeline();
-      return true;
     } catch (e) {
-      throw Exception(e);
+      throw Exception('Error: Failed to remove transaction sheet! -> $e');
     }
+    await loadPipeline();
   }
 
   /// Updates a single transaction in the database
-  Future<bool> updateData(int id, String column, String value) async {
+  Future<void> updateData(int id, String column, String value) async {
     // TODO: Pass old and new transaction and let this function determine
     // the values that changed to update the database
     try {
@@ -134,7 +131,6 @@ class DataPipeline {
           _allTransactions[t] = TransactionObj.loadFromMap(props);
         }
       }
-      return true;
     } catch (e) {
       throw Exception('Error: Failed to update data! -> $e');
     }
@@ -218,7 +214,7 @@ class DataPipeline {
   }
 
   /// Deletes all transactions associated with an account from the database
-  Future<bool> deleteTransactionsByAccount(String account) async {
+  Future<void> deleteTransactionsByAccount(String account) async {
     await ensureInitialized();
     try {
       await dbs.deleteTransactionsBySheet(account);
@@ -226,11 +222,10 @@ class DataPipeline {
       throw Exception('Error: failed to delete transactions by account -> $e');
     }
     await loadPipeline();
-    return true;
   }
 
   /// Deletes an account from the account table
-  Future<bool> deleteAccount(String account) async {
+  Future<void> deleteAccount(String account) async {
     await ensureInitialized();
     try {
       await dbs.deleteAccount(account);
@@ -238,7 +233,6 @@ class DataPipeline {
       throw Exception('Error: failed to delete account -> $e');
     }
     await loadPipeline();
-    return true;
   }
 
 }

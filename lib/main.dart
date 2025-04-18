@@ -45,7 +45,7 @@ class RefreshController extends ChangeNotifier {
   CompInfo compInfo = CompInfo('Refresh', 1);
 
   /// Method to rebuild certain widgets
-  void refreshwidgets() {
+  void refreshWidgets() {
     compInfo.printout('Widgets rebuilding');
     notifyListeners();
   }

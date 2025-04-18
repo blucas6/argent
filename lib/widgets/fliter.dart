@@ -46,7 +46,7 @@ class _FilterWidgetState extends State<FilterWidget> {
             if (newVal != currentYear)
             {
               currentYear = newVal;
-              context.read<RefreshController>().refreshwidgets();
+              context.read<RefreshController>().refreshWidgets();
             }
           },
         ),
@@ -58,7 +58,7 @@ class _FilterWidgetState extends State<FilterWidget> {
             if (newVal != currentMonth)
             {
               currentMonth = newVal;
-              context.read<RefreshController>().refreshwidgets();
+              context.read<RefreshController>().refreshWidgets();
             }
           },
         )
