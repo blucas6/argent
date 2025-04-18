@@ -3,9 +3,11 @@ import 'package:argent/components/debug.dart';
 import 'package:argent/components/transaction_obj.dart';
 import 'package:argent/components/tags.dart';
 import 'package:argent/widgets/edit_menu.dart';
+import 'package:argent/main.dart';
 
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'package:provider/provider.dart';
 
 /// This widget displays the transaction table
 class TransactionTableWidget extends StatefulWidget {
@@ -321,8 +323,10 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
             onEnter: (_) => onHover(rowNum, true),
             onExit: (_) => onHover(rowNum, false),
             child: GestureDetector(
-              onTap: () {
-                showEditMenu(context, rowNum);
+              onTap: () async {
+                var controller = context.read<RefreshController>();
+                await showEditMenu(context, rowNum);
+                controller.refreshwidgets();
               },
               child: AnimatedContainer(
                 duration: Duration(milliseconds: 200),
@@ -344,7 +348,7 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
   }
 
   /// Pops up the edit menu widget and updates the transactions
-  void showEditMenu(BuildContext context, int rowNum) async {
+  Future<void> showEditMenu(BuildContext context, int rowNum) async {
     String? newTag = await showDialog<String?>(
                                       context: context,
                                       builder: (BuildContext context) {
@@ -365,9 +369,7 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
       await widget.dataPipeline.updateData(sortedTransactions[rowNum].id!,
                                   TransactionObj().tagCol,
                                   currentTags.join(TransactionObj().tagdelim));
-      // trigger reload all widgets
-      // TODO
-      // newdatatrigger()
+      loadTransactions();
     }
   }
 
@@ -404,28 +406,33 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: createDataTableHeaders(context),
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              constraints: BoxConstraints(
-                minWidth: 500,
-                minHeight: 200,
-                maxHeight: maxTransactionWidgetHeight
-              ),
-              alignment: Alignment.topLeft,
-              child: Scrollbar(
-                controller: _scrollController,
-                thumbVisibility: true,
-                child: SingleChildScrollView(
-                  controller: _scrollController,
-                  scrollDirection: Axis.vertical,
-                  child: createDataTable(context)
+        Consumer<RefreshController>(
+          builder: (context, c, child) {
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  constraints: BoxConstraints(
+                    minWidth: 500,
+                    minHeight: 200,
+                    maxHeight: maxTransactionWidgetHeight
+                  ),
+                  alignment: Alignment.topLeft,
+                  child: Scrollbar(
+                    controller: _scrollController,
+                    thumbVisibility: true,
+                    child: SingleChildScrollView(
+                      controller: _scrollController,
+                      scrollDirection: Axis.vertical,
+                      child: createDataTable(context)
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ]
-        )
-      ]);
+              ]
+            );
+          }
+        ),
+      ]
+    );
   }
 }
