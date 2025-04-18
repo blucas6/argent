@@ -2,7 +2,7 @@ import 'package:argent/components/data_pipeline.dart';
 import 'package:argent/components/transaction_sheet.dart';
 import 'package:argent/components/debug.dart';
 import 'package:argent/components/popup.dart';
-import 'package:argent/main.dart';
+import 'package:argent/components/event_controller.dart';
 
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
@@ -59,12 +59,7 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    context.read<RefreshController>().addListener(_newDataPush);
-  }
-
-  /// Another widget made changes to the account data
-  void _newDataPush() {
-    loadAccounts();
+    context.read<EventController>().addAccountEventListener(loadAccounts);
   }
 
   // on load, get data from the db
@@ -190,7 +185,7 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
                   height: 25,
                   child: IconButton(
                     onPressed: () async {
-                      var controller = context.read<RefreshController>();
+                      var controller = context.read<EventController>();
                       bool confirm = await showConfirmationDialogue(
                         'Delete Sheet',
                         'Delete transaction sheet?',
@@ -198,7 +193,10 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
                       if (confirm) {
                         try {
                           await removeSheetFromDatabase(acc);
-                          controller.refreshWidgets();
+                          // fire an account event
+                          controller.notifyAccountEvent();
+                          // fire new data event
+                          controller.notifyDataChangeEvent();
                         } catch (e) {
                           if (context.mounted) {
                             showErrorDialogue(e.toString(), context);
@@ -292,7 +290,7 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
                     IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () async {
-                        var controller = context.read<RefreshController>();
+                        var controller = context.read<EventController>();
                         bool confirm = await showConfirmationDialogue(
                         'Delete Account',
                         'Are you sure you want to delete the $accName account?',
@@ -300,7 +298,10 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
                         if (confirm) {
                           try {
                             await deleteAccountData(accName);
-                            controller.refreshWidgets();
+                            // fire an account event
+                            controller.notifyAccountEvent();
+                            // fire a new data event
+                            controller.notifyDataChangeEvent();
                           } catch (e) {
                             if (context.mounted) {
                               showErrorDialogue(e.toString(), context);
@@ -346,30 +347,28 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
           ),
           const SizedBox(height: 10),
           // ACCOUNTS
-          Consumer<RefreshController>(
-            builder: (context, rc, child) {
-              return Container(
-                padding: EdgeInsets.all(10),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.vertical,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: getAllAccountWidgets(),
-                  ),
-                ),
-              );
-            },
+          Container(
+            padding: EdgeInsets.all(10),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: getAllAccountWidgets(),
+              ),
+            ),
           ),
           const SizedBox(height: 20),
           // BUTTON ADD
           ElevatedButton(
             onPressed: () async {
-              var controller = context.read<RefreshController>();
+              var controller = context.read<EventController>();
               try {
                 (bool,String) resStatus = await addNewSheet();
                 if (resStatus.$1) {
-                  // cause a new data push event
-                  controller.refreshWidgets();
+                  // cause a new account event
+                  controller.notifyAccountEvent();
+                  // cause a new data event
+                  controller.notifyDataChangeEvent();
                 } else {
                   if (context.mounted) {
                     showErrorDialogue(resStatus.$2, context);

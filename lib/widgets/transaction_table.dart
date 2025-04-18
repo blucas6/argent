@@ -3,7 +3,7 @@ import 'package:argent/components/debug.dart';
 import 'package:argent/components/transaction_obj.dart';
 import 'package:argent/components/tags.dart';
 import 'package:argent/widgets/edit_menu.dart';
-import 'package:argent/main.dart';
+import 'package:argent/components/event_controller.dart';
 
 import 'package:flutter/material.dart';
 import 'dart:math';
@@ -66,12 +66,7 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    context.read<RefreshController>().addListener(_newDataPush);
-  }
-
-  /// Another widget made changes to the transaction data, need to refresh
-  void _newDataPush() {
-    loadTransactions();
+    context.read<EventController>().addDataChangeEventListener(loadTransactions);
   }
 
   /// Reloads all transaction data and applies active filters
@@ -336,10 +331,10 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
             onExit: (_) => onHover(rowNum, false),
             child: GestureDetector(
               onTap: () async {
-                var controller = context.read<RefreshController>();
+                var controller = context.read<EventController>();
                 bool update = await showEditMenu(context, rowNum);
                 if (update) {
-                  controller.refreshWidgets();
+                  controller.notifyDataChangeEvent();
                 }
               },
               child: AnimatedContainer(
@@ -423,32 +418,28 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: createDataTableHeaders(context),
         ),
-        Consumer<RefreshController>(
-          builder: (context, rc, child) {
-            return Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  constraints: BoxConstraints(
-                    minWidth: 500,
-                    minHeight: 200,
-                    maxHeight: maxTransactionWidgetHeight
-                  ),
-                  alignment: Alignment.topLeft,
-                  child: Scrollbar(
-                    controller: _scrollController,
-                    thumbVisibility: true,
-                    child: SingleChildScrollView(
-                      controller: _scrollController,
-                      scrollDirection: Axis.vertical,
-                      child: createDataTable(context)
-                    ),
-                  ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              constraints: BoxConstraints(
+                minWidth: 500,
+                minHeight: 200,
+                maxHeight: maxTransactionWidgetHeight
+              ),
+              alignment: Alignment.topLeft,
+              child: Scrollbar(
+                controller: _scrollController,
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  scrollDirection: Axis.vertical,
+                  child: createDataTable(context)
                 ),
-              ]
-            );
-          }
-        ),
+              ),
+            ),
+          ]
+        )
       ]
     );
   }
