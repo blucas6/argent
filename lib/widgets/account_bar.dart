@@ -10,10 +10,10 @@ import 'dart:io';
 /// This widget displays the accounts available
 class AccountBarWidget extends StatefulWidget {
 
+  const AccountBarWidget({super.key, required this.dataPipeline});
+
   /// Access to the data pipeline
   final DataPipeline dataPipeline;
-
-  const AccountBarWidget({super.key, required this.dataPipeline});
 
   @override
   State<AccountBarWidget> createState() => _AccountBarWidgetState();
@@ -52,7 +52,7 @@ class _AccountBarWidgetState extends State<AccountBarWidget> {
     loadAccounts();
   }
 
-  // on load, get data from the db
+  // On load, get the account data from the pipeline
   void loadAccounts() async {
     try {
       accountList = await widget.dataPipeline.allAccounts;

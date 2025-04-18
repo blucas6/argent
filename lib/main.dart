@@ -1,4 +1,5 @@
 import 'package:argent/components/debug.dart';
+import 'package:argent/widgets/fliter.dart';
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'dart:io';
@@ -116,6 +117,7 @@ class _HomePageState extends State<HomePage> {
               width: 750,
               child: Column(
                 children: [
+                  FilterWidget(dataPipeline: widget.dataPipeline),
                   TransactionTableWidget(dataPipeline: widget.dataPipeline)
                 ],
               ),
