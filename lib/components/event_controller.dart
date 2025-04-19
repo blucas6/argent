@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'package:argent/components/debug.dart';
 
+typedef FilterCallback = void Function(String? year, String? month);
+
 /// Refresh Controller Class
 class EventController extends ChangeNotifier {
   
@@ -10,6 +12,9 @@ class EventController extends ChangeNotifier {
  
   /// Account events represent a change in data concerning accounts
   final List<VoidCallback> _accountEventListeners = [];
+
+  /// Filter events represent a change in the existing data being displayed
+  final List<FilterCallback> _filterEventListeners = [];
 
   /// Holds the component information for debugging messages
   CompInfo compInfo = CompInfo('Event', 1);
@@ -24,6 +29,11 @@ class EventController extends ChangeNotifier {
     _dataChangeEventListeners.add(listener);
   }
 
+  /// Add a listener to listen to filter events 
+  void addFilterEventListener(FilterCallback listener) {
+    _filterEventListeners.add(listener);
+  }
+
   /// Data change event
   void notifyDataChangeEvent() {
     for (final listener in _dataChangeEventListeners) {
@@ -35,6 +45,13 @@ class EventController extends ChangeNotifier {
   void notifyAccountEvent() {
     for (final listener in _accountEventListeners) {
       listener();
+    }
+  }
+
+  /// Filter change event
+  void notifyFilterChangeEvent(String? year, String? month) {
+    for (final listener in _filterEventListeners) {
+      listener(year, month);
     }
   }
 }

@@ -3,6 +3,7 @@ import 'package:argent/components/debug.dart';
 import 'package:argent/components/event_controller.dart';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 /// This widget displays the available filters
 class FilterWidget extends StatefulWidget {
@@ -37,6 +38,13 @@ class _FilterWidgetState extends State<FilterWidget> {
   void initState() {
     super.initState();
     loadData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    context.read<EventController>().addDataChangeEventListener(loadData);
   }
 
   Future<void> loadData() async {
@@ -77,7 +85,8 @@ class _FilterWidgetState extends State<FilterWidget> {
             if (newVal != currentYear)
             {
               currentYear = newVal;
-              //context.read<EventController>().refreshWidgets();
+              context.read<EventController>().notifyFilterChangeEvent(
+                                                    currentYear, currentMonth);
             }
             setState(() {});
           },
@@ -90,7 +99,8 @@ class _FilterWidgetState extends State<FilterWidget> {
             if (newVal != currentMonth)
             {
               currentMonth = newVal;
-              //context.read<RefreshController>().refreshWidgets();
+              context.read<EventController>().notifyFilterChangeEvent(
+                                                    currentYear, currentMonth);
               setState(() {});
             }
           },

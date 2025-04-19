@@ -66,7 +66,46 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
+    // data has changed listener
     context.read<EventController>().addDataChangeEventListener(loadTransactions);
+    // data filter has changed listener
+    context.read<EventController>().addFilterEventListener(handleFilterEvent);
+  }
+
+  /// Receive the filter event, clear sorting, apply filters and set the state
+  void handleFilterEvent(String? year, String? month) {
+    activeYearFilter = year;
+    activeMonthFilter = month;
+    clearSorting();
+    applyFilters();
+    setState(() {});
+  }
+
+  /// Applies a set of filters to the current data being displayed
+  void applyFilters() {
+    compInfo.printout('Applying filters $activeYearFilter $activeMonthFilter');
+    List<TransactionObj> filteredTransactions = [];
+    // if both filters are active grab all transactions for that month and year
+    if (activeYearFilter != null && activeMonthFilter != null) {
+      for (TransactionObj trans in allTransactions) {
+        if (trans.year == activeYearFilter && trans.month == activeMonthFilter)
+        {
+          filteredTransactions.add(trans);
+        }
+      }
+      // set the current displaying transactions to the filtered ones
+      sortedTransactions = List.from(filteredTransactions);
+    }
+    else if (activeYearFilter != null && activeMonthFilter == null) {
+      // if only year filter is active grab all transactions for that year
+      for (TransactionObj trans in allTransactions) {
+        if (trans.year == activeYearFilter) {
+          filteredTransactions.add(trans);
+        }
+      }
+      // set the filtered transactions to the display
+      sortedTransactions = List.from(filteredTransactions);
+    }
   }
 
   /// Reloads all transaction data and applies active filters
@@ -79,17 +118,29 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
     // create a 2D array for which row is being hovered
     rowHovers = List.filled(sortedTransactions.length, false);
     // apply filters if there are any
-    if (activeMonthFilter != null && activeYearFilter != null) {
-      // applyFilters(activeYearFilter!, activeMonthFilter!);
-    }
+    applyFilters();
     // if a column is being sorted, sort transactions
+    applySorting();
+    setState(() {});
+  }
+
+  /// Apply any existing sorting, need to call set state after call
+  void applySorting() {
+    // go through the array and sort active column
     for (int col=0; col<columnSorts.length; col++) {
       if (columnSorts[col] != null) {
         updateIcons(col);
         sortMe(col);
       }
     }
-    setState(() {});
+  }
+
+  /// Clears all active sorting and returns icons to normal
+  void clearSorting() {
+    sortedTransactions = List<TransactionObj>.from(allTransactions);
+    columnSorts = List.filled(
+                              TransactionObj().getProperties().keys.length, null
+                            );
   }
 
   /// Updates the icon state
