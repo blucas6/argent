@@ -39,9 +39,10 @@ class _FilterWidgetState extends State<FilterWidget> {
     loadData();
   }
 
-  void loadData() async {
+  Future<void> loadData() async {
     compInfo.printout('Reloading filters');
     dataRange = await widget.dataPipeline.getTotalDateRange();
+    setState(() {});
   }
 
   /// Gathers all the years from the data range into a list
@@ -78,10 +79,11 @@ class _FilterWidgetState extends State<FilterWidget> {
               currentYear = newVal;
               //context.read<EventController>().refreshWidgets();
             }
+            setState(() {});
           },
         ),
         DropdownButton(
-          value: currentYear,
+          value: currentMonth,
           hint: const Text('Select a month'),
           items: getMonthChoices(),
           onChanged: (dynamic newVal) {
@@ -89,6 +91,7 @@ class _FilterWidgetState extends State<FilterWidget> {
             {
               currentMonth = newVal;
               //context.read<RefreshController>().refreshWidgets();
+              setState(() {});
             }
           },
         )
