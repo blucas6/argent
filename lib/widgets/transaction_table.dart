@@ -363,8 +363,8 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
                                       builder: (BuildContext context) {
       return EditMenuWidget();
     });
-    compInfo.printout("Adding new tag: $newTag");
     if (newTag != null) {
+      compInfo.printout("Adding new tag: $newTag");
       List<String> currentTags = sortedTransactions[rowNum].tags;
       if (newTag == Tags().delete) {
         currentTags = [];
@@ -380,9 +380,8 @@ class TransactionTableWidgetState extends State<TransactionTableWidget> {
       await widget.dataPipeline.updateData(sortedTransactions[rowNum].id!,
                                   TransactionObj().tagCol,
                                   currentTags.join(TransactionObj().tagdelim));
-      return true;
     }
-    return false;
+    return true;
   }
 
   /// Create the data rows for the data table
