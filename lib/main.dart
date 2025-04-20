@@ -1,3 +1,4 @@
+import 'package:argent/widgets/pie_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'dart:io';
@@ -89,7 +90,7 @@ class _HomePageState extends State<HomePage> {
               decoration: BoxDecoration(
                 color: null
               ),
-              width: 350,
+              width: 300,
               child: Column(
                 children: [
                   AccountBarWidget(dataPipeline: widget.dataPipeline)
@@ -109,12 +110,18 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
+            // RIGHT SECTION
             Container(
               decoration: BoxDecoration(
                 color: null
               ),
-              width: 300,
-              child: Column(),
+              width: 400,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  MonthlyPieChartWidget(dataPipeline: widget.dataPipeline)
+                ],
+              ),
             )
           ],
         )

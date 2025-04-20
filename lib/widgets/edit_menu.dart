@@ -6,10 +6,10 @@ class EditMenuWidget extends StatefulWidget {
   const EditMenuWidget({super.key});
 
   @override
-  State<EditMenuWidget> createState() => EditMenuWidgetState();
+  State<EditMenuWidget> createState() => _EditMenuWidgetState();
 }
 
-class EditMenuWidgetState extends State<EditMenuWidget> {
+class _EditMenuWidgetState extends State<EditMenuWidget> {
   /// User selected tag
   String? _selectedTag;
 

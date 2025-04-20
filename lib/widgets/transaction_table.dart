@@ -18,15 +18,15 @@ class TransactionTableWidget extends StatefulWidget {
   final DataPipeline dataPipeline;
 
   @override
-  State<TransactionTableWidget> createState() => TransactionTableWidgetState();
+  State<TransactionTableWidget> createState() => _TransactionTableWidgetState();
 }
 
-class TransactionTableWidgetState extends State<TransactionTableWidget> {
+class _TransactionTableWidgetState extends State<TransactionTableWidget> {
 
   /// List of transaction objects
   List<TransactionObj> allTransactions = [];
 
-  /// Sorted transactions based on filters
+  /// Sorted transactions based on filters and sorting
   List<TransactionObj> sortedTransactions = [];
 
   /// Current filter for the year
