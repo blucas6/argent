@@ -55,7 +55,9 @@ class _FilterWidgetState extends State<FilterWidget> {
 
   /// Gathers all the years from the data range into a list
   List<DropdownMenuItem> getYearChoices() {
-    List<DropdownMenuItem> choices = [];
+    List<DropdownMenuItem> choices = [
+      DropdownMenuItem(value: null, child: Text(''))
+    ];
     dataRange.forEach((year, month) {
       choices.add(DropdownMenuItem(value: year, child: Text(year)));
     });
@@ -64,7 +66,9 @@ class _FilterWidgetState extends State<FilterWidget> {
 
   /// Gathers all the months for a certain year into a list
   List<DropdownMenuItem> getMonthChoices() {
-    List<DropdownMenuItem> choices = [];
+    List<DropdownMenuItem> choices = [
+      DropdownMenuItem(value: null, child: Text(''))
+    ];
     if (currentYear != null && dataRange.containsKey(currentYear)) {
       for (String month in dataRange[currentYear]) {
         choices.add(DropdownMenuItem(value: month, child: Text(month)));
@@ -104,7 +108,7 @@ class _FilterWidgetState extends State<FilterWidget> {
               setState(() {});
             }
           },
-        )
+        ),
       ],
     );
   }
