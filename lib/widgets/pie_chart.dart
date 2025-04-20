@@ -130,18 +130,35 @@ class PieChartWidget extends StatefulWidget {
                   required this.slicesMap
                 });
 
+  /// Total height of the widget
   final double totalHeight;
+  
+  /// Total width for the widget
   final double totalWidth;
+
+  /// Size of each slice
   final double sliceSize;
+
+  /// Size of a slice being hovered
   final double sliceExpanded;
+
+  /// Space between slices
   final double sliceSpace;
+
+  /// Size of the radius in the chart
   final double radiusSize;
+
+  /// Animation time for the chart
   final int animationTime = 750;
+
+  /// Title of the widget
   final String title;
+
   /// Map of data used to generate the slices in the chart
-  /// 
   /// { category : totalcost }
   final Map<String, dynamic> slicesMap;
+
+  /// Colors for the chart
   final List<MaterialColor> colorsList = [
     Colors.blue, Colors.amber, Colors.cyan, Colors.deepOrange,
     Colors.green, Colors.indigo, Colors.lime, Colors.deepPurple,
@@ -155,9 +172,13 @@ class PieChartWidget extends StatefulWidget {
 
 class _PieChartWidgetState extends State<PieChartWidget> {
 
+  /// Keeps track of the slice being hovered
   int? touchedIndex;
+
+  /// Stores the total cost of the data passed in
   double totalCost = 0;
 
+  /// Creates pie chart sections from data dictionary
   List<PieChartSectionData> getPieChartSections() {
     widget.slicesMap.forEach((category, value) {
       totalCost += value;
