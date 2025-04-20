@@ -115,7 +115,7 @@ class _HomePageState extends State<HomePage> {
               decoration: BoxDecoration(
                 color: null
               ),
-              width: 400,
+              width: 430,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
